@@ -1,0 +1,17 @@
+@Functions_HostAddress = http://localhost:7131
+
+POST {{Functions_HostAddress}}/api/index-documents/
+Content-Type: application/json
+Accept: application/json
+
+{
+  "ids": [
+    "1409.0473",
+    "2309.07930",
+    "1706.03762",
+    "2005.11401", 
+    "2312.11997"
+  ]
+}
+
+###
