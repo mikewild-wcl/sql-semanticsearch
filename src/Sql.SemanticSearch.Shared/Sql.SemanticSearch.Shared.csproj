@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Suppress CA1716: Rename namespace so that it no longer conflicts with the reserved language keyword 'Shared' -->
+    <NoWarn>CA1716</NoWarn>
+  </PropertyGroup>
+
+</Project>

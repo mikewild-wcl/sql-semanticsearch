@@ -1,9 +1,9 @@
 <Solution>
   <Folder Name="/Solution Items/">
-    <File Path="./.editorconfig" />
-    <File Path="./Directory.Build.props" />
-    <File Path="./Directory.Packages.props" />
-    <File Path="./README.md" />
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/Sql.SemanticSearch.Core.UnitTests/Sql.SemanticSearch.Core.UnitTests.csproj" />
@@ -11,6 +11,8 @@
   </Folder>
   <Project Path="src/Sql.SemanticSearch.AppHost/Sql.SemanticSearch.AppHost.csproj" />
   <Project Path="src/Sql.SemanticSearch.Core/Sql.SemanticSearch.Core.csproj" />
+  <Project Path="src/Sql.SemanticSearch.DatabaseDeployment/Sql.SemanticSearch.DatabaseDeployment.csproj" Id="f474f503-a06d-4dad-a819-955c28875b5f" />
   <Project Path="src/Sql.SemanticSearch.Ingestion.Functions/Sql.SemanticSearch.Ingestion.Functions.csproj" />
   <Project Path="src/Sql.SemanticSearch.ServiceDefaults/Sql.SemanticSearch.ServiceDefaults.csproj" />
+  <Project Path="src/Sql.SemanticSearch.Shared/Sql.SemanticSearch.Shared.csproj" />
 </Solution>

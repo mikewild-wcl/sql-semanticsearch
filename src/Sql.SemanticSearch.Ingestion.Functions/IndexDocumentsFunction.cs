@@ -3,9 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Sql.SemanticSearch.Core.Requests;
-using System;
 
-namespace Sql.SemanticQuery.Ingestion.Functions;
+namespace Sql.SemanticSearch.Ingestion.Functions;
 
 public class IndexDocumentsFunction(ILogger<IndexDocumentsFunction> logger)
 {
