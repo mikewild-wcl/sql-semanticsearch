@@ -97,6 +97,16 @@ FROM sys.external_models
 
 I've included a script that drops all the tables in the repo - sql/clean_documents_database.sql.
 
+
+## Getting data from arXiv
+
+The function calls a service which calls a client class that gets papers from arXiv. It has methods to:
+ - Get paper information from arXiv API by paper ID
+ - Download the PDF file and returns it as a MemoryStream   
+ - Complete workflow: Get paper info and download PDF to memory stream 
+ 
+ We'll only use the first one for now. The others will come in handy when it's time to pull down the files and save into our database.
+ 
 ## Future improvements
 
 - add an MCP server as a function and show how it can be used from a client like GitHub Copilot
