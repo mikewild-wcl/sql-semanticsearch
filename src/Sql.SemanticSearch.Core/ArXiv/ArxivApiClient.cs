@@ -11,11 +11,25 @@ public class ArxivApiClient(
     ILogger<ArxivApiClient> logger) : IArxivApiClient
 {
     private readonly HttpClient _httpClient = httpClient;
-
-    //TODO: Replace console logging with calls to logger
-#pragma warning disable CA1823 // Avoid unused private fields
     private readonly ILogger<ArxivApiClient> _logger = logger;
-#pragma warning restore CA1823 // Avoid unused private fields
+
+    private static readonly Action<ILogger, string, Exception?> _logFetchingPaperInfo =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(0, nameof(ArxivApiClient)),
+            "Fetching paper info from: {QueryUrl}");
+
+    private static readonly Action<ILogger, Uri, Exception?> _logDownloadingPdf =
+        LoggerMessage.Define<Uri>(
+            LogLevel.Information,
+            new EventId(0, nameof(ArxivApiClient)),
+            "Downloading PDF from: {PdfUri}");
+
+    private static readonly Action<ILogger, long, Exception?> _logPdfDownloadedSuccessfully =
+        LoggerMessage.Define<long>(
+            LogLevel.Information,
+            new EventId(0, nameof(ArxivApiClient)),
+            "PDF downloaded successfully. Size: {PdfSize} bytes");
 
     [SuppressMessage("Usage", "CA2234:Pass system uri objects instead of strings", Justification = "The HttpClient will have a base uri set.")]
     public async Task<ArxivPaper> GetPaperInfo(string arxivId)
@@ -30,7 +44,7 @@ public class ArxivApiClient(
             // Build the API query URL - we can do better and use a list, but need to be careful with max items
             string queryUrl = $"query?id_list={arxivId}";
 
-            Console.WriteLine($"Fetching paper info from: {queryUrl}");
+            _logFetchingPaperInfo(_logger, queryUrl, null);
 
             var response = await _httpClient.GetAsync(queryUrl);
             response.EnsureSuccessStatusCode();
@@ -81,7 +95,7 @@ public class ArxivApiClient(
     {
         try
         {
-            Console.WriteLine($"Downloading PDF from: {pdfUri}");
+            _logDownloadingPdf(_logger, pdfUri, null);
 
             HttpResponseMessage response = await _httpClient.GetAsync(pdfUri);
             response.EnsureSuccessStatusCode();
@@ -92,7 +106,7 @@ public class ArxivApiClient(
             // Create a MemoryStream from the bytes
             MemoryStream memoryStream = new MemoryStream(pdfBytes);
 
-            Console.WriteLine($"PDF downloaded successfully. Size: {pdfBytes.Length} bytes");
+            _logPdfDownloadedSuccessfully(_logger, pdfBytes.Length, null);
 
             return memoryStream;
         }
