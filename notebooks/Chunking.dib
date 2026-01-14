@@ -1,0 +1,142 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"csharp"},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"semanticsearchkernelspec","languageName":"python"},{"name":"value"}]}}
+
+#!markdown
+
+# Ingesting and chunking files 
+
+Simple .NET examples use PdFPig to chunk pdf files, or simple Open XML manipulation for a Word document like [this example](https://learn.microsoft.com/en-us/semantic-kernel/concepts/vector-store-connectors/how-to/vector-store-data-ingestion?pivots=programming-language-csharp#read-the-paragraphs-in-the-document) for Semantic Kernel.
+
+In this notebook I want to explore how this can be done and compare it with another approach like [Docling](https://github.com/docling-project/docling).
+
+#!csharp
+
+#!connect jupyter --kernel-name semanticsearchkernelspec --kernel-spec semanticsearchkernelspec
+
+#!csharp
+
+#r "nuget:DocumentFormat.OpenXml, *-*"
+#r "nuget:PdfPig, *-*"
+#r "nuget:System.Net.Http, *-*"
+
+const string downloadFolder = @"..\downloads";
+
+#!csharp
+
+using System.IO;
+using System.Xml;
+
+
+if (!Directory.Exists(downloadFolder))
+{
+    Directory.CreateDirectory(downloadFolder);
+}
+
+#!csharp
+
+// Read and extract text from a word document
+// You will need to copy the document to the downloads folder first
+
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+
+string ReadWordDocument(string filePath)
+{
+    using var wordDoc = WordprocessingDocument.Open(filePath, false);
+    
+    var body = wordDoc.MainDocumentPart.Document.Body;
+    return body.InnerText;    
+}
+
+ReadWordDocument(Path.Combine(downloadFolder, "sample.docx"))
+
+#!csharp
+
+internal class TextParagraph
+{
+    public required string Key { get; init; }
+
+    public required string DocumentUri { get; init; }
+
+    public required string ParagraphId { get; init; }
+
+    public required string Text { get; init; }
+
+    /// <summary>The embedding generated from the Text.</summary>
+    public ReadOnlyMemory<float> TextEmbedding { get; set; }
+}
+
+public static IEnumerable<TextParagraph> ReadParagraphs(Stream documentContents, string documentUri)
+{
+    Console.WriteLine("opeing word doc");
+    // Open the document.
+    using WordprocessingDocument wordDoc = WordprocessingDocument.Open(documentContents, false);
+    Console.WriteLine("opened word doc");
+    if (wordDoc.MainDocumentPart == null)
+    {
+        yield break;
+    }
+
+    XmlDocument xmlDoc = new XmlDocument();
+    XmlNamespaceManager nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
+    nsManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+    nsManager.AddNamespace("w14", "http://schemas.microsoft.com/office/word/2010/wordml");
+
+    xmlDoc.Load(wordDoc.MainDocumentPart.GetStream());
+
+    // Select all paragraphs in the document and break if none found.
+    XmlNodeList? paragraphs = xmlDoc.SelectNodes("//w:p", nsManager);
+    if (paragraphs == null)
+    {
+        yield break;
+    }
+
+    // Iterate over each paragraph.
+    foreach (XmlNode paragraph in paragraphs)
+    {
+        // Select all text nodes in the paragraph and continue if none found.
+        XmlNodeList? texts = paragraph.SelectNodes(".//w:t", nsManager);
+        if (texts == null)
+        {
+            continue;
+        }
+
+        // Combine all non-empty text nodes into a single string.
+        var textBuilder = new StringBuilder();
+        foreach (XmlNode text in texts)
+        {
+            if (!string.IsNullOrWhiteSpace(text.InnerText))
+            {
+                textBuilder.Append(text.InnerText);
+            }
+        }
+
+        // Yield a new TextParagraph if the combined text is not empty.
+        var combinedText = textBuilder.ToString();
+        if (!string.IsNullOrWhiteSpace(combinedText))
+        {
+            // Console.WriteLine("Found paragraph:");
+            // Console.WriteLine(combinedText);
+            // Console.WriteLine();
+
+            yield return new TextParagraph
+            {
+                Key = Guid.NewGuid().ToString(),
+                DocumentUri = documentUri,
+                ParagraphId = paragraph.Attributes?["w14:paraId"]?.Value ?? string.Empty,
+                Text = combinedText
+            };
+        }
+    }
+}
+
+var filePath = Path.Combine(downloadFolder, "sample.docx");
+var textParagraphs = ReadParagraphs(
+        new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read),
+        new Uri(Path.GetFullPath(filePath)).ToString());
+
+Console.WriteLine($"Word doc has {textParagraphs.Count()} paragraphs.");
+Console.WriteLine();
+
+textParagraphs.Take(10).Select(p => p.Text).ToList().ForEach(t => Console.WriteLine(t));

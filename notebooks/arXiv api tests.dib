@@ -1,0 +1,39 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"csharp"},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"value"}]}}
+
+#!markdown
+
+# arXiv document extraction
+
+Playground for pulling arXiv document data.
+
+#!csharp
+
+#r "nuget:System.Net.Http, *-*"
+
+#!csharp
+
+using System.Net.Http;
+
+#!csharp
+
+public record ArxivPaper(string Id, string Title)
+{
+    public required string Summary { get; init; }
+
+    public required Uri PdfUri { get; init; }
+
+    public DateTime Published { get; init; }
+
+    public IReadOnlyCollection<string> Authors { get; init; } = [];
+}
+
+#!csharp
+
+private const string API_BASE_URL = "http://export.arxiv.org/api/query";
+
+var httpClient = new HttpClient
+{
+    BaseAddress = new Uri(API_BASE_URL)
+};
