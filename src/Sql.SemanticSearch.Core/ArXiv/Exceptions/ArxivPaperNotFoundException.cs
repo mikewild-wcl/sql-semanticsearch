@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Sql.SemanticSearch.Core.ArXiv.Exceptions;
 
+[ExcludeFromCodeCoverage(Justification = "No need to cover exception types in tests.")]
 public sealed class ArxivPaperNotFoundException : InvalidOperationException
 {
     public ArxivPaperNotFoundException()
