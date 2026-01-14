@@ -9,15 +9,14 @@ namespace Sql.SemanticSearch.Ingestion.Functions.UnitTests;
 
 public class IndexDocumentsFunctionTests
 {
-    private readonly IArxivApiClient _arxivApiClientSubstitute;
+    private readonly IIngestionService _ingestionServiceSubstitute;
     private readonly IndexDocumentsFunction _sut;
-    
 
     public IndexDocumentsFunctionTests()
     {
-        _arxivApiClientSubstitute = Substitute.For<IArxivApiClient>();
+        _ingestionServiceSubstitute = Substitute.For<IIngestionService>();
 
-        _sut = new(_arxivApiClientSubstitute, NullLogger<IndexDocumentsFunction>.Instance);
+        _sut = new(_ingestionServiceSubstitute, NullLogger<IndexDocumentsFunction>.Instance);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ builder.ConfigureFunctionsWebApplication();
 
 builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
 
-//builder.Services.AddTransient<IDocumentIngestionService, DocumentIngestionService>();
+builder.Services.AddTransient<IIngestionService, IngestionService>();
 
 builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>
 {

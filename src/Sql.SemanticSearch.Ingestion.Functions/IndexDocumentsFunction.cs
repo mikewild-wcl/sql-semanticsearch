@@ -10,10 +10,10 @@ namespace Sql.SemanticSearch.Ingestion.Functions;
 
 [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Need to catch general exceptions for top-level function failures")]
 public class IndexDocumentsFunction(
-    IArxivApiClient arxivApiClient,
+    IIngestionService ingestionService,
     ILogger<IndexDocumentsFunction> logger)
 {
-    private readonly IArxivApiClient _arxivApiClient = arxivApiClient;
+    private readonly IIngestionService _ingestionService = ingestionService;
     private readonly ILogger<IndexDocumentsFunction> _logger = logger;
 
     private static readonly Action<ILogger, int, Exception?> _logFunctionTriggered =
@@ -27,12 +27,6 @@ public class IndexDocumentsFunction(
             LogLevel.Warning,
             new EventId(0, nameof(IndexDocumentsFunction)),
             "IngestFromUriFunction called with no document ids.");
-
-    private static readonly Action<ILogger, string, Exception?> _logDocumentIdProcessStarted =
-        LoggerMessage.Define<string>(
-            LogLevel.Information,
-            new EventId(0, nameof(IndexDocumentsFunction)),
-            "IngestFromUriFunction processing document id: {Id}.");
 
     private static readonly Action<ILogger, Exception?> _logFunctionFailed =
         LoggerMessage.Define(
@@ -57,12 +51,7 @@ public class IndexDocumentsFunction(
 
             _logFunctionTriggered(_logger, indexingRequest.Ids.Count, null);
 
-            //await _ingestionService.ProcessIndexingRequest(indexingRequest);
-            foreach (var id in indexingRequest.Ids)
-            {
-                _logDocumentIdProcessStarted(_logger, id, null);
-                await _arxivApiClient.GetPaperInfo(id);
-            }
+            await _ingestionService.ProcessIndexingRequest(indexingRequest);
 
             return new OkObjectResult($"Indexing request successfully processed {indexingRequest.Ids.Count} documents.");
         }
