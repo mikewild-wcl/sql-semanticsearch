@@ -15,6 +15,7 @@ Playground for pulling arXiv document data.
 #!csharp
 
 using System.Net.Http;
+using System.Xml.Linq;
 
 #!csharp
 
@@ -37,3 +38,45 @@ var httpClient = new HttpClient
 {
     BaseAddress = new Uri(API_BASE_URL)
 };
+
+async Task<IReadOnlyList<ArxivPaper>> SearchArxivPapersAsync(string query, int maxResults = 10)
+{
+    var requestUri = $"?search_query=all:{Uri.EscapeDataString(query)}&start=0&max_results={maxResults}";
+
+    var response = await httpClient.GetAsync(requestUri);
+    response.EnsureSuccessStatusCode();
+
+    var content = await response.Content.ReadAsStringAsync();
+
+    var xmlDoc = System.Xml.Linq.XDocument.Parse(content);
+    XNamespace ns = "http://www.w3.org/2005/Atom";
+
+    var entries = xmlDoc.Root.Elements(ns + "entry");
+
+    var papers = entries.Select(entry =>
+    {
+        var id = entry.Element(ns + "id")?.Value.Split('/').Last() ?? string.Empty;
+        var title = entry.Element(ns + "title")?.Value.Trim() ?? string.Empty;
+        var summary = entry.Element(ns + "summary")?.Value.Trim() ?? string.Empty;
+        var publishedStr = entry.Element(ns + "published")?.Value ?? string.Empty;
+        DateTime.TryParse(publishedStr, out var published);
+        var authors = entry.Elements(ns + "author").Select(a => a.Element(ns + "name")?.Value.Trim() ?? string.Empty).ToList();
+        var pdfLink = entry.Elements(ns + "link")
+                           .FirstOrDefault(l => l.Attribute("title")?.Value == "pdf")
+                           ?.Attribute("href")?.Value ?? string.Empty;
+
+        return new ArxivPaper(id, title)
+        {
+            Summary = summary,
+            Published = published,
+            Authors = authors,
+            PdfUri = new Uri(pdfLink)
+        };
+    }).ToList();
+
+    return papers;
+}
+
+#!csharp
+
+await SearchArxivPapersAsync("quantum computing", 5)

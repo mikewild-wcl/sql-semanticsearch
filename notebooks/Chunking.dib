@@ -33,10 +33,16 @@ if (!Directory.Exists(downloadFolder))
     Directory.CreateDirectory(downloadFolder);
 }
 
-#!csharp
+#!markdown
 
-// Read and extract text from a word document
-// You will need to copy the document to the downloads folder first
+## Word document in C#
+
+Read and extract text from a word document
+
+:note!
+You will need to copy the document to the downloads folder first
+
+#!csharp
 
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
