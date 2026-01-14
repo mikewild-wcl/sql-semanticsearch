@@ -67,9 +67,10 @@ This is added via an extension `WithGPUSupportIfVendorParameterProvided` and sho
    }
 ```
 
-## Arxiv data
+## ArXiv data
 
-The ingestion function uses the [arXiv API](https://info.arxiv.org/help/api/basics.html) to load document metadata and then to download documents.  
+The ingestion function uses the [arXiv API](https://info.arxiv.org/help/api/index.html) to load document metadata and then to download documents.
+Thank you to arXiv for use of its open access interoperability.
 
 
 

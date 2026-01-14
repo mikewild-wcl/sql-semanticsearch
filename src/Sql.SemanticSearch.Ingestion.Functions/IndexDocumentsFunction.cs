@@ -2,12 +2,18 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Sql.SemanticSearch.Ingestion.Functions;
 
-public class IndexDocumentsFunction(ILogger<IndexDocumentsFunction> logger)
+[SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Need to catch general exceptions for top-level function failures")]
+public class IndexDocumentsFunction(
+    IArxivApiClient arxivApiClient,
+    ILogger<IndexDocumentsFunction> logger)
 {
+    private readonly IArxivApiClient _arxivApiClient = arxivApiClient;
     private readonly ILogger<IndexDocumentsFunction> _logger = logger;
 
     private static readonly Action<ILogger, int, Exception?> _logFunctionTriggered =
@@ -23,31 +29,48 @@ public class IndexDocumentsFunction(ILogger<IndexDocumentsFunction> logger)
             "IngestFromUriFunction called with no document ids.");
 
     private static readonly Action<ILogger, string, Exception?> _logDocumentIdProcessStarted =
-    LoggerMessage.Define<string>(
-        LogLevel.Information,
-        new EventId(0, nameof(IndexDocumentsFunction)),
-        "IngestFromUriFunction processing document id: {Id}.");    
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(0, nameof(IndexDocumentsFunction)),
+            "IngestFromUriFunction processing document id: {Id}.");
+
+    private static readonly Action<ILogger, Exception?> _logFunctionFailed =
+        LoggerMessage.Define(
+            LogLevel.Error,
+            new EventId(0, nameof(IndexDocumentsFunction)),
+            "An error occurred while processing the indexing request.");
 
     [Function("IndexArxivDocuments")]
-    public IActionResult Run(
+    public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "index-documents")]
         HttpRequest _,
         [Microsoft.Azure.Functions.Worker.Http.FromBody]
         IndexingRequest indexingRequest)
     {
-        if (indexingRequest?.Ids is null || indexingRequest.Ids.Count == 0)
+        try
         {
-            _logNullOrEmptyIndexingRequestWarning(_logger, null);
-            return new BadRequestObjectResult("No ids provided.");
+            if (indexingRequest?.Ids is null || indexingRequest.Ids.Count == 0)
+            {
+                _logNullOrEmptyIndexingRequestWarning(_logger, null);
+                return new BadRequestObjectResult("No ids provided.");
+            }
+
+            _logFunctionTriggered(_logger, indexingRequest.Ids.Count, null);
+
+            //await _ingestionService.ProcessIndexingRequest(indexingRequest);
+            foreach (var id in indexingRequest.Ids)
+            {
+                _logDocumentIdProcessStarted(_logger, id, null);
+                await _arxivApiClient.GetPaperInfo(id);
+            }
+
+            return new OkObjectResult($"Indexing request successfully processed {indexingRequest.Ids.Count} documents.");
+        }
+        catch (Exception ex)
+        {
+            _logFunctionFailed(_logger, ex);
+            return new StatusCodeResult(StatusCodes.Status500InternalServerError);
         }
 
-        _logFunctionTriggered(_logger, indexingRequest.Ids.Count, null);
-
-        foreach (var id in indexingRequest.Ids)
-        {
-            _logDocumentIdProcessStarted(_logger, id, null);
-        }
-
-        return new OkObjectResult($"Indexing request successfully processed {indexingRequest.Ids.Count} documents.");
     }
 }

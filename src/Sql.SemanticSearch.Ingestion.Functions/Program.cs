@@ -1,6 +1,8 @@
 using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Sql.SemanticSearch.Core.ArXiv;
+using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Shared;
 
 var builder = FunctionsApplication.CreateBuilder(args);
@@ -9,6 +11,13 @@ builder.AddServiceDefaults();
 
 builder.ConfigureFunctionsWebApplication();
 
-var connectionString = builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase);
+builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
+
+//builder.Services.AddTransient<IDocumentIngestionService, DocumentIngestionService>();
+
+builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>
+{
+    client.BaseAddress = new("http://export.arxiv.org/api/");
+});
 
 await builder.Build().RunAsync().ConfigureAwait(true);
