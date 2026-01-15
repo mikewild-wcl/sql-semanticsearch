@@ -4,7 +4,7 @@ using System.Globalization;
 
 namespace Sql.SemanticSearch.AppHost.Extensions;
 
-[SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "<Pending>")]
+[SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Extension members don't need to be static")]
 internal static class ResourceBuilderExtensions
 {
     extension(IResourceBuilder<ParameterResource> parameter)

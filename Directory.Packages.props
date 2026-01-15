@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aspire.Microsoft.Data.SqlClient" Version="13.1.0" />
+    <PackageVersion Include="Dapper" Version="2.1.66" />
     <PackageVersion Include="Microsoft.ApplicationInsights.WorkerService" Version="2.23.0" />
     <PackageVersion Include="Aspire.Hosting.Azure.Functions" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.DevTunnels" Version="13.1.0" />

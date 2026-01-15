@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
+using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
 
 namespace Sql.SemanticSearch.Core.UnitTests.ArXiv;
@@ -8,12 +9,17 @@ namespace Sql.SemanticSearch.Core.UnitTests.ArXiv;
 public class IngestionServiceTests
 {
     private readonly IArxivApiClient _arxivApiClientSubstitute;
+    private readonly IDatabaseConnection _databaseConnection;
     private readonly IngestionService _sut;
 
     public IngestionServiceTests()
     {
         _arxivApiClientSubstitute = Substitute.For<IArxivApiClient>();
-        _sut = new IngestionService(_arxivApiClientSubstitute, NullLogger<IngestionService>.Instance);
+        _databaseConnection = Substitute.For<IDatabaseConnection>();
+        _sut = new IngestionService(
+            _arxivApiClientSubstitute, 
+            _databaseConnection,
+            NullLogger<IngestionService>.Instance);
     }
 
     [Fact]

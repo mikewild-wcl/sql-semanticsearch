@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
+using Sql.SemanticSearch.Core.Data;
+using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Shared;
 
 var builder = FunctionsApplication.CreateBuilder(args);
@@ -13,6 +15,7 @@ builder.ConfigureFunctionsWebApplication();
 
 builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
 
+builder.Services.AddTransient<IDatabaseConnection, DapperConnection>();
 builder.Services.AddTransient<IIngestionService, IngestionService>();
 
 builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>

@@ -1,0 +1,21 @@
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Sql.SemanticSearch.Core.ArXiv.Extensions;
+
+[SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Extension members don't need to be static")]
+internal static class ArxivExtensions
+{
+    extension(string value)
+    {
+        public string ToShortId()
+        {
+            // Equivalent to: self.entry_id.split("arxiv.org/abs/")[-1]
+            const string marker = "arxiv.org/abs/";
+            var parts = value.Split(marker, StringSplitOptions.None);
+            return parts.Length > 0
+                ? parts[^1]
+                : value;
+        }
+    }
+}
+
