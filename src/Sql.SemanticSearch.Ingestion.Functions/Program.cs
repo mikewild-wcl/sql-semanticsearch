@@ -5,11 +5,14 @@ using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
+using Sql.SemanticSearch.ServiceDefaults;
 using Sql.SemanticSearch.Shared;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+builder.Services.AddOllamaResilienceHandler(); /* Should check AI provider type before adding? */
 
 builder.ConfigureFunctionsWebApplication();
 
