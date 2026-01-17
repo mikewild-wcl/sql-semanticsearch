@@ -64,12 +64,12 @@ public class IngestionService(
                 };
 
                 // TODO: Use ExecuteScalar and add get the id out?
-                await _databaseConnection.ExecuteAsync(
+                var documentId = await _databaseConnection.ExecuteScalarAsync<int>(
                     """
                     INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])
                     VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
+                    SELECT CAST(SCOPE_IDENTITY() as int);
                     """, dto);
-                //SELECT CAST(SCOPE_IDENTITY() as int);
                 /*
         [Id] INT IDENTITY CONSTRAINT PK_Documents primary key,
         [ArxivId] NVARCHAR(50) NULL,

@@ -37,10 +37,10 @@ if (!Directory.Exists(downloadFolder))
 
 ## Word document in C#
 
-Read and extract text from a word document
+Read and extract text from a word document. This code is adabpted from [](https://learn.microsoft.com/en-us/semantic-kernel/concepts/vector-store-connectors/how-to/vector-store-data-ingestion?pivots=programming-language-csharp)
 
 :note!
-You will need to copy the document to the downloads folder first
+You will need to copy the document to the downloads folder in the repo first.
 
 #!csharp
 

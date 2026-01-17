@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Sql.SemanticSearch.DatabaseDeployment\Sql.SemanticSearch.DatabaseDeployment.csproj"  AspireProjectMetadataTypeName="DatabaseDeployment" />
+    <ProjectReference Include="..\Sql.SemanticSearch.DatabaseDeployment\Sql.SemanticSearch.DatabaseDeployment.csproj" AspireProjectMetadataTypeName="DatabaseDeployment" />
     <ProjectReference Include="..\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" AspireProjectMetadataTypeName="SemanticFunctions" />
     <ProjectReference Include="..\Sql.SemanticSearch.Shared\Sql.SemanticSearch.Shared.csproj" IsAspireProjectResource="false" />
   </ItemGroup>

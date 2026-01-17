@@ -6,9 +6,11 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var embeddingModelParameter = builder.AddParameter(ParameterNames.EmbeddingModel);
 var embeddingDimensionsParameter = builder.AddParameter(ParameterNames.EmbeddingDimensions);
+var sqlServerExternalEmbeddingModelParameter = builder.AddParameter(ParameterNames.SqlServerExternalEmbeddingModel);
+var gpuVendorParameter = builder.AddParameter(ParameterNames.GpuVendor, value: new BooleanParameterDefault(false));
+
 var sqlServerPortParameter = builder.AddParameter(ParameterNames.SqlServerPort, value: new EmptyParameterDefault());
 var sqlPasswordParameter = builder.AddParameter(ParameterNames.SqlServerPassword, value: new EmptyParameterDefault(), secret: true);
-var gpuVendorParameter = builder.AddParameter(ParameterNames.GpuVendor, value: new BooleanParameterDefault(false));
 
 var ollama = builder.AddOllama(ResourceNames.Ollama)
     .WithGPUSupportIfAvailable(gpuVendorParameter)
@@ -35,11 +37,13 @@ var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(Resourc
     .WithReference(ollama, devTunnel)
     .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
     .WithEnvironment(ParameterNames.EmbeddingModel, embeddingModelParameter)
+    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitFor(devTunnel)
     .WaitFor(sqlServer);
 
 builder.AddAzureFunctionsProject<Projects.SemanticFunctions>(ResourceNames.SemanticFunctions)
     .WithReference(sqlServer)
+    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitForCompletion(databaseDeployment);
 
 await builder.Build().RunAsync().ConfigureAwait(true);

@@ -1,5 +1,6 @@
 ﻿using DbUp;
 using DbUp.Extensions.Logging;
+using DbUp.Helpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,10 @@ var logger = loggerFactory.CreateLogger<Program>();
 var aiProvider = EnvironmentVariables.DefaultAIProvider;
 var embeddingDimensions = int.TryParse(builder.Configuration[ParameterNames.EmbeddingDimensions], out var dimensions) && dimensions > 0 ? dimensions : 1536;
 var embeddingModel = builder.Configuration[ParameterNames.EmbeddingModel];
+var externalEbeddingModel = builder.Configuration[ParameterNames.SqlServerExternalEmbeddingModel];
+
 var ollamaEndpoint = builder.Configuration[EnvironmentVariables.OllamaTunnelEndpoint];
+var ollamaUri = new Uri(new Uri(ollamaEndpoint!), "api/embed"); /* SQL Server uses api/embed */
 
 var connectionString = builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase);
 
@@ -28,21 +32,39 @@ var serviceProvider = builder.Build().Services;
 Dictionary<string, string> variables = new()
 {
     { EnvironmentVariables.AIProvider, aiProvider.ToUpperInvariant() },
-    { EnvironmentVariables.AIEndpoint, ollamaEndpoint! },
+    { EnvironmentVariables.AIEndpoint, ollamaUri.AbsoluteUri! },
     //{ EnvironmentVariables.AIClientKey, Env.GetString("OPENAI_KEY")},
     { EnvironmentVariables.EmbeddingModel, embeddingModel! },
-    { EnvironmentVariables.EmbeddingDimensions, embeddingDimensions.ToString("D", CultureInfo.InvariantCulture)}
+    { EnvironmentVariables.EmbeddingDimensions, embeddingDimensions.ToString("D", CultureInfo.InvariantCulture) },
+    { EnvironmentVariables.ExternalEmbeddingModel, externalEbeddingModel! }
 };
 
 logger.LogInformation("Starting deployment...");
-var dbup = DeployChanges.To
+var result = DeployChanges.To
     .SqlDatabase(connectionString)
     .WithVariables(variables)
-    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+    .WithScriptsEmbeddedInAssembly(
+            typeof(Program).Assembly,
+            f => !f.Contains("always-run.", StringComparison.InvariantCultureIgnoreCase))
+    .WithTransaction()
     .AddLoggerFromServiceProvider(serviceProvider)
-    .Build();
+    .Build()
+    .PerformUpgrade();
 
-var result = dbup.PerformUpgrade();
+if (result.Successful)
+{
+    result = DeployChanges.To
+        .SqlDatabase(connectionString)
+        .WithVariables(variables)
+        .WithScriptsEmbeddedInAssembly(
+            typeof(Program).Assembly,
+            f => f.Contains("always-run.", StringComparison.InvariantCultureIgnoreCase))
+        .JournalTo(new NullJournal())
+        .WithTransaction()
+        .AddLoggerFromServiceProvider(serviceProvider)
+        .Build()
+        .PerformUpgrade();
+}
 
 if (!result.Successful)
 {

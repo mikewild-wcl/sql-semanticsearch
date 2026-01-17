@@ -1,4 +1,3 @@
-using System.Threading;
 namespace Sql.SemanticSearch.Core.ArXiv.Interfaces;
 
 public interface IArxivApiClient

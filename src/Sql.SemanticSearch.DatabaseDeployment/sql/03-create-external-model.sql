@@ -1,29 +1,18 @@
---Get parameters from environment
 DECLARE @aiProvider NVARCHAR(20) = '$AI_PROVIDER$'
-DECLARE @externalModelName NVARCHAR(50)
 
 PRINT 'Creating external embedding model with provider=$AI_PROVIDER$, endpoint=$AI_CLIENT_ENDPOINT$, model=$EMBEDDING_MODEL$' 
 
 IF (@aiProvider = 'OLLAMA')
 BEGIN
     PRINT 'Using OLLAMA as AI provider'
-    SET @externalModelName = 'SqlVectorSampleOllamaEmbeddingModel'
 
-    IF EXISTS (SELECT * FROM sys.external_models WHERE name = @externalModelName)
+    IF EXISTS (SELECT * FROM sys.external_models WHERE name = '$EXTERNAL_EMBEDDING_MODEL$')
     BEGIN
-        PRINT FORMATMESSAGE('Dropping existing external model ''%s''', @externalModelName)
-        EXEC('DROP EXTERNAL MODEL ' + @externalModelName)
+        PRINT 'Dropping existing external model $EXTERNAL_EMBEDDING_MODEL$'
+        EXEC('DROP EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$')
     END
 
-    DECLARE @cmd NVARCHAR(4000) 
-    SET @cmd = 'CREATE EXTERNAL MODEL ' + @externalModelName + ' 
-          WITH (
-            LOCATION = ''$AI_CLIENT_ENDPOINT$'',
-            API_FORMAT = ''OLLAMA'',
-            MODEL_TYPE = EMBEDDINGS,
-            MODEL = ''$EMBEDDING_MODEL$'')'
-
-    EXEC('CREATE EXTERNAL MODEL ' + @externalModelName + ' 
+    EXEC('CREATE EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$
           WITH (
             LOCATION = ''$AI_CLIENT_ENDPOINT$'',
             API_FORMAT = ''OLLAMA'',

@@ -38,9 +38,16 @@ If you want to connect to the database with SSMS you can get the connection stri
 Optionally you can set the SQL Server port and sa password by adding these parameters to your secrets. If the parameters aren't set then default values will be generated.
 ```
   "Parameters": {
-   "SqlServerPassword": "<password>",
-   "SqlServerPort": 14331
-   }
+    "SqlServerPassword": "<password>",
+    "SqlServerPort": 14331
+  }
+```
+
+The embedding model is created in the database deployment scripts. The external model name is defined in the AppHost parameters as
+```
+  "Parameters": {
+    "SqlServerExternalEmbeddingModel": "SemanticSearchOllamaEmbeddingModel"
+  }
 ```
 
 ## Call function app
@@ -56,15 +63,14 @@ curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: applic
 
  - See [Function integration](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-aspire-integration).
 
-
 ## AI model clients
 
 If you are using Ollama and have a GPU, include a parameter `OllamaGpuVendor` in the AppHost appsettings or secrets. The value can be `Nvidia` or `AMD` (or any future values from `Aspire.Hosting.OllamaGpuVendor`).
 This is added via an extension `WithGPUSupportIfVendorParameterProvided` and should match your system.
 ```
   "Parameters": {
-   "OllamaGpuVendor": "Nvidia"
-   }
+    "OllamaGpuVendor": "Nvidia"
+  }
 ```
 
 ## ArXiv data

@@ -68,7 +68,9 @@ I've created a shared project which has constants that can be used in place of t
 ```
 
 Set up
-  - Ollama with optional GPU support - this is controlled with a parameter which needs to be added to your secrets. It defaults to false
+  - Ollama with optional GPU support - this is controlled with a parameter which needs to be added to your secrets. It defaults to false.
+  - The embedding model name is defined in the parameters - we are using nomic-embed-text. The number of dimensions needs to be set so we can set up the database correctly.
+  - An external model will be created in SQL Server so the correct name needs to be provided in the parameters.
   - SQL Server. This has a persistent lifetime and a data volume so it we don't need to set it up every time. Note the image has to be set because the default in Aspire is sql-2022 - this will no doubt be fixed in a future release. There are parameters for a default port and password; if provided this makes it easier to query the database from Sql Management Studio because the connection string won't change.
   
 Parameters:
@@ -76,6 +78,7 @@ Parameters:
 "Parameters": {
   "EmbeddingModel": "nomic-embed-text",
   "EmbeddingDimensions": 768,
+  "SqlServerExternalEmbeddingModel": "SemanticSearchOllamaEmbeddingModel"
   "SqlServerPort": "",
   "SqlServerPassword": "",
   "OllamaGpuVendor": ""
