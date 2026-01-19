@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
     <RootNamespace>Sql.SemanticSearch.Core.UnitTests</RootNamespace>
     <!--
     This template uses native xUnit.net command line options when using 'dotnet run' and
@@ -9,6 +9,7 @@
     for Microsoft Testing Platform, please visit:
       https://xunit.net/docs/getting-started/v3/microsoft-testing-platform
     -->
+    <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>-->
   </PropertyGroup>
 
   <ItemGroup>
