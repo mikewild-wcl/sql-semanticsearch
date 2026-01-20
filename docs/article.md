@@ -1,102 +1,147 @@
-Document indexing and semantic search with an Azure Function App and SQL Server 2025
+# Document indexing and semantic search with an Azure Function App and SQL Server 2025
+
+In November 2025 Microsoft release SQL Server 2025, which, like everything else from Microsoft reently, is heavily AI-focussed. It introduces a native vector data type and the ability to call external large language models. This opens up new ways of searcing information in SQL Server, as well as in Azure Sql which already had the new types.
+
+Vector search is important for building intelligent applications, allowing semantic search, RAG pipelines, product
+matching, data classification, and more. 
+
+Specialized vector databases are available, but for SQL Server users that meant a more complicated architectire,  generating vector embeddings in code and saving them into inefficient structures. Now everything is much simpler.
+
+**Azure Functions** are a simple, cloud-native way to add semantic intelligence to any application.
+
+???????????????????
+This article looks at how to use Azure functions to 
+ - process document from arXiv into a SQL Server database 
+ - generate vector embeddings for the summary
+ - allow search
+
+We'll use Aspire for hosting and running locally - what I think of as "localfirst - cloud native". It lets us run a database, functions, and an embedding model locally without needing to set up resources on Azure or running scripts. The embedding model will be run in Ollama, again because it can run locally. I'm not going into detail on how that works; that can come another day.
+
+ This is intended as an initial proof of concept, so it isn't a full RAG solution. We just want to show how to add embeddings for semantic search; a future iteration could download files, chunk them into the database, and add a chat capability.
+
+![Architecture overview diagram, showing the main components described above.](./images/architecture_overview.png)
+
+## Embedding model
+
+For this project I've chosen `nomic-embed-text` as the embedding model. If you want to dig into the details see [Nomic](https://www.nomic.ai/news/nomic-embed-text-v1), or go to [Hugging Face](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5).
+It's a large context length text encoder that performs better than OpenAI `text-embedding-ada-002` and `text-embedding-3-small`, but if I migrate to OpenAI in a production environment I'd probably go for `text-embedding-3-small`. The model isn't important but what IS important is using the same model for all embedding tasks,
+
+The model has 768 dimensions by default and we'll need to remember that when creating our SQL tables.
+
+e don't need a chat model at this stage since we are only searching, but it might be added later.
 
 
+## SQL Server 2025 Schema and Embedding model setup
 
+The SQL Server tables are fairly simple.
 
-Create an empty Aspire application. I used my own template to set this up with some default files.
+First make sure server allows external REST endpoints: 
 
-Because this uses ManagePackageVersionsCentrally, you might need to update the references in projects that you add - make sure they are in `Directory.Packages.props` and remove the version from the `.csproj' files.
-
-Add a reference to the ServiceDefaults project and call builder.AddServiceDefaults() in Program.cs.
-
-Remove app insights because it will be managed via service defaults:
-```csharp
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
+``` sql
+EXEC sp_configure 'external rest endpoint enabled', 1;
+RECONFIGURE WITH OVERRIDE;
 ```
 
-When adding projects you can remove these lines from the `'csproj` files because they are in Directory.build.props:
-```csharp
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+We have a table for documents which includes summary text and metadata as a JSON column containing authors and tags, plus an index for it.
+**Link to Davide M article**
+
+``` sql
+CREATE TABLE dbo.Documents
+(
+    [Id] INT IDENTITY CONSTRAINT PK_Documents primary key,
+    [ArxivId] NVARCHAR(50) NULL,
+    [Title] nvarchar(300) NOT NULL,
+    [Summary] nvarchar(max) NULL,
+    [Comments] nvarchar(max) NULL,
+    [Metadata] JSON NULL,
+    [PdfUri] NVARCHAR(1000) NOT NULL,
+    [Published] DATETIME2(0) NOT NULL,
+    [Updated] DATETIME2(7) NULL,
+    [CreatedOn] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_CreatedUtc DEFAULT (SYSUTCDATETIME()),
+    [LastUpdatedOn] datetime2(0) NULL
+)
+GO
+CREATE JSON INDEX IX_Documents_Metadata ON dbo.Documents(Metadata) FOR ('$');
+GO
 ```
 
-## Outline
+Summary and Metadata are going to be turned into vector embeddings so we have a table for each of those - Microsoft recommends doing it this way. Note the `$EMBEDDING_DIMENSIONS$` which has the number of dimensions (768).
 
-- Introductory paragraph(s) about SQL Server 2005 now having vectors. 
-- Goals 
-  - use Azure functions to process document from arXiv into a SQL Server database and generate embeddings for the summary
-  - a second function will search
-  - NOT a full RAG solution at this pint. We just want to show how to add embeddings for semantic search.
-- Architecture
-  - describe basic architecture  
-  - Aspire for hosting and running locally - "local-first" cloud native...
-  - Ollama for simplicity and local development  
-  - Embedding model - `nomic-embed-text` [Nomic](https://www.nomic.ai/news/nomic-embed-text-v1), see details on [Hugging Face](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5)
-      - nomic-embed-text is a large context length text encoder that surpasses OpenAI text-embedding-ada-002 and text-embedding-3-small performance on short and long context tasks.
-      - dimensionality can be changed but we will use 768.
-  - We don't need a chat model at this stage since we are only searching, but it might be added later.
-  - SQL Server in Docker
-  - DBUp for deployment
-- Aspire AppHost - describe and show code
-- SQL Server 2025 Schema and Embedding model setup
-- Azure Function: Insert Pipeline 
+``` sql
+EXEC('CREATE TABLE dbo.DocumentSummaryEmbeddings (
+    Id INT NOT NULL,
+    Embedding VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+    CONSTRAINT FK_DocumentSummaryEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
+```
+
+``` sql
+EXEC('CREATE TABLE dbo.DocumentMetadataEmbeddings (
+    Id INT NOT NULL,
+    Embedding VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+    CONSTRAINT FK_DocumentMetadataEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
+```
+
+Finally we need to set up the Ollama embedding model. If we were using OpenAI then there some security settings need to configured, but those aren't needed for Ollama.
+
+One problem with using Ollama is that it only exposes an http endpoint. If you look at other articles r books they'll tell you to set up an https proxy of one sort or another, but because we're using Aspire a dev tunnel can do the job. The uri for that needs to be passed into the setup script below. I drop and recreate it each time because I've been bitten by Aspire changing the dev tunnel uri and port.
+``` sql
+IF EXISTS (SELECT * FROM sys.external_models WHERE name = '$EXTERNAL_EMBEDDING_MODEL$')
+BEGIN
+    EXEC('DROP EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$')
+END
+
+EXEC('CREATE EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$
+      WITH (
+        LOCATION = ''$AI_CLIENT_ENDPOINT$'',
+        API_FORMAT = ''OLLAMA'',
+        MODEL_TYPE = EMBEDDINGS,
+        MODEL = ''$EMBEDDING_MODEL$'')')
+```
+
+You can check that the model was deployed by running this in SSMS:
+```
+SELECT [external_model_id], [name], [api_format], model_type_desc, [model], [location]
+FROM sys.external_models
+```
+![External models in SSMS.](./images/external_models.png)
+
+## Azure Function: Insert Pipeline 
   - http-triggered function that takes a list of arXiv document ids and queries the details
   - insert and create embedding
   - simple approach; in production it might be better to send a message to another function via a queue or ServiceBus and do the embedding there
     - also mention article on SQL trigger that will do the embedding for us
   - search query - takes a string and returns search reasults. Can test using curl or Postman for simplicity, so no need for an extra web or console app
 
-![Architecture overview diagram, showing the main components described above.](./images/architecture_overview.png)
-
-## Aspire AppHost
-
-We'll need a few nuget packages for Azure functions, SQL Server, Ollama, and DevTunnels - we'll need this last one so that SQL Server can talk to Ollama over https.
-```
-Aspire.Hosting.Azure.Functions
-Aspire.Hosting.DevTunnels
-Aspire.Hosting.SqlServer
-CommunityToolkit.Aspire.Hosting.Ollama
+``` csharp
 ```
 
-I've created a shared project which has constants that can be used in place of the magic strings that Aspire templates have given us, and set shortened project names to siumplify the AppHost code. Note the additional Aspire attributs in my project file:
-```
-<ProjectReference Include="..\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" AspireProjectMetadataTypeName="SemanticFunctions" />
-<ProjectReference Include="..\Sql.SemanticSearch.Shared\Sql.SemanticSearch.Shared.csproj" IsAspireProjectResource="false" />
+## 7. Azure Function: Query Pipeline
+
+Generate an embedding for the user query, then let SQL Server do vector
+search:
+
+``` csharp
+var cmd = new SqlCommand(@"
+    SELECT TOP 10 Id, Title, Content,
+    VECTOR_DISTANCE(Embedding, @Query, COSINE) AS Score
+    FROM Documents
+    ORDER BY Score", conn);
+
+cmd.Parameters.AddWithValue("@Query", queryEmbedding);
 ```
 
-Set up
-  - Ollama with optional GPU support - this is controlled with a parameter which needs to be added to your secrets. It defaults to false.
-  - The embedding model name is defined in the parameters - we are using nomic-embed-text. The number of dimensions needs to be set so we can set up the database correctly.
-  - An external model will be created in SQL Server so the correct name needs to be provided in the parameters.
-  - SQL Server. This has a persistent lifetime and a data volume so it we don't need to set it up every time. Note the image has to be set because the default in Aspire is sql-2022 - this will no doubt be fixed in a future release. There are parameters for a default port and password; if provided this makes it easier to query the database from Sql Management Studio because the connection string won't change.
+ ## Vector index
+
+I haven't done this because as soon as a vecttor index is created, the table becomes read-only.
   
-Parameters:
-```
-"Parameters": {
-  "EmbeddingModel": "nomic-embed-text",
-  "EmbeddingDimensions": 768,
-  "SqlServerExternalEmbeddingModel": "SemanticSearchOllamaEmbeddingModel"
-  "SqlServerPort": "",
-  "SqlServerPassword": "",
-  "OllamaGpuVendor": ""
-},
-```
+? -   Built-in approximate nearest neighbor (ANN) vector indexes\
+-   Fast similarity functions (cosine, dot-product, Euclidean)\
+-   Hardware acceleration for vector math
 
-## Database deployment
+In a preoduction scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated. That's too much for a proof-of-concept like this! Microsoft says the read-only limitation will be removed soon so heopefully a proper index will be acheivable then.
 
-DbUp
-Note for future changes: https://elanderson.net/2020/08/always-run-migrations-with-dbup/
 
-You can check that the model wqas deployed by running
-```
-SELECT [external_model_id], [name], [api_format], model_type_desc, [model], [location]
-FROM sys.external_models
-```
 
-![External models in SSMS.](./images/external_models.png)
 
 I've included a script that drops all the tables in the repo - sql/clean_documents_database.sql.
 
@@ -110,6 +155,9 @@ The function calls a service which calls a client class that gets papers from ar
  
  We'll only use the first one for now. The others will come in handy when it's time to pull down the files and save into our database.
  
+ 
+The API calls here mean we aren't completely local-first, but that's fine for this intial version. In future a workaround can be created, e.g. a fake api that provides test data.
+
 ## Future improvements
 
 - add an MCP server as a function and show how it can be used from a client like GitHub Copilot
@@ -118,8 +166,9 @@ The function calls a service which calls a client class that gets papers from ar
 - deploy to Azure
 
 ---
+### Source code
 [!NOTE] 
-> Source code is available on [GitHub](https://github.com/mikewild-wcl/semanticsearch)
+> Source code is available on [GitHub](https://github.com/mikewild-wcl/sql-semanticsearch)
 
 
 ## References

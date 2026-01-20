@@ -15,7 +15,7 @@ pip install ipykernel
 python -m ipykernel install --user --name=semanticsearchkernelspec 
 ```
 
-This will create a new kernel in your user Roaming foldwer - you can list it with
+This will create a new kernel in your user Roaming folder - you can list it with
 ```
 ls ${env:APPDATA}/jupyter/kernels/semanticsearchkernelspec
 ```
