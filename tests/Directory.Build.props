@@ -12,11 +12,6 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <!-- Allow underscores in test names -->
-    <NoWarn>CA1707;</NoWarn>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <AnalysisLevel>Latest</AnalysisLevel>
     <AnalysisMode>All</AnalysisMode>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
