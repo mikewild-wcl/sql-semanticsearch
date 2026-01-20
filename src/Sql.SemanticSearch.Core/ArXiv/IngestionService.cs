@@ -37,9 +37,9 @@ public class IngestionService(
     {
         ArgumentNullException.ThrowIfNull(indexingRequest);
 
-        try
+        await foreach (var paper in _arxivApiClient.GetPaperInfo(indexingRequest.Ids))
         {
-            await foreach (var paper in _arxivApiClient.GetPaperInfo(indexingRequest.Ids))
+            try
             {
                 //_logDocumentIdProcessStarted(_logger, id, null);
                 //var paper = await _arxivApiClient.GetPaperInfo(id);
@@ -77,15 +77,16 @@ public class IngestionService(
                 }
                 catch (Exception ex)
                 {
-                    _logErrorStoringPaper(_logger, id, ex);
+                    _logErrorStoringPaper(_logger, paper?.Id, ex);
                 }
-#pragma warning restore CA1031 // Do not catch general exception types
+#pragma warning restore CA1031 // Do not catch general exception types            
+
             }
-        }
-        catch (HttpRequestException ex)
-        {
-`           _logErrorStoringPaper(_logger, id, ex);
-            throw new ArxivApiException($"Error fetching paper info: {ex.Message}", ex);
+            catch (HttpRequestException ex)
+            {
+                //_logErrorStoringPaper(_logger, id, ex);
+                throw new ArxivApiException($"Error fetching paper info: {ex.Message}", ex);
+            }
         }
     }
 }

@@ -3,6 +3,8 @@ using Sql.SemanticSearch.Core.ArXiv.Exceptions;
 using Sql.SemanticSearch.Core.ArXiv.Extensions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Pipes;
+using System.Linq;
 using System.Xml.Linq;
 
 namespace Sql.SemanticSearch.Core.ArXiv;
@@ -41,23 +43,14 @@ public class ArxivApiClient(
         var start = 0;
         do  //Loop will 
         {
-            //Take maxItems
-            //Loop and retun
-            //Increment start
             //Don't query more than max items. We aren't using arxiv paging in this code, just doing our own thing
-            foreach (var batch in arxivIds.Skip(start).Take(maxItems))
+            var batch = arxivIds.Skip(start).Take(maxItems);
+            await foreach (var paper in GetPaperInfo(batch, start, maxItems))
             {
-                foreach (var item in batch)
-                {
-                    //why does the compiler think batch is string? ???
-                }
-                await foreach (var paper in GetPaperInfo(batch, start, maxItems))
-                {
-                    yield return paper;
-                }
-
-                start += maxItems;
+                yield return paper;
             }
+
+            start += maxItems;
         } while (start < maxItems);
     }
 
@@ -88,7 +81,7 @@ public class ArxivApiClient(
 
     public async Task<(ArxivPaper paper, MemoryStream pdfStream)> GetPaperWithPdf(string arxivId)
     {
-        var paper = await GetPaperInfo(arxivId);
+        var paper = await GetPaperInfo([arxivId]).FirstOrDefaultAsync();
 
         if (paper.PdfUri is null)
         {
@@ -111,9 +104,10 @@ public class ArxivApiClient(
          */
 
         // Clean the arXiv ID (remove version if present)
-        var idList = arxivIds.ToList().ForEach(id => 
+        var idList = string.Join(',', arxivIds
+            .Select(id =>
             id.Replace("arXiv:", "", StringComparison.InvariantCultureIgnoreCase).Split('v')[0])
-            .Join(',');
+            );
         //arxivId = arxivId.Replace("arXiv:", "", StringComparison.InvariantCultureIgnoreCase).Split('v')[0];
 
         // Build the API query URL - we can do better and use a list, but need to be careful with max items
@@ -121,7 +115,9 @@ public class ArxivApiClient(
 
         _logFetchingPaperInfo(_logger, queryUrl, null);
 
+#pragma warning disable CA2234 // Pass system uri objects instead of strings
         var response = await _httpClient.GetAsync(queryUrl);
+#pragma warning restore CA2234 // Pass system uri objects instead of strings
         response.EnsureSuccessStatusCode();
 
         string xmlContent = await response.Content.ReadAsStringAsync();
@@ -139,7 +135,7 @@ public class ArxivApiClient(
         //    throw new ArxivPaperNotFoundException(arxivId);
         //}
 
-        foreach (var entry = doc.Descendants(atom + "entry"))
+        foreach (var entry in doc.Descendants(atom + "entry"))
         {
             var entryId = entry.Element(atom + "id")?.Value;
             var id = entryId.ToShortId();
