@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Sql.SemanticSearch.Core.ArXiv.Exceptions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
@@ -36,59 +37,55 @@ public class IngestionService(
     {
         ArgumentNullException.ThrowIfNull(indexingRequest);
 
-        foreach (var id in indexingRequest.Ids)
+        try
         {
-            _logDocumentIdProcessStarted(_logger, id, null);
-            var paper = await _arxivApiClient.GetPaperInfo(id);
+            await foreach (var paper in _arxivApiClient.GetPaperInfo(indexingRequest.Ids))
+            {
+                //_logDocumentIdProcessStarted(_logger, id, null);
+                //var paper = await _arxivApiClient.GetPaperInfo(id);
+                _logDocumentIdProcessStarted(_logger, paper.Id, null);
 
 #pragma warning disable CA1031 // Do not catch general exception types
-            try
-            {
-                //await StorePaperInDatabase(paper);
-                var metadata = new
+                try
                 {
-                    paper.Authors,
-                    paper.Categories
-                };
-                var metadataString = JsonSerializer.Serialize(metadata, CamelCaseSerialierOptions);
+                    //await StorePaperInDatabase(paper);
+                    var metadata = new
+                    {
+                        paper.Authors,
+                        paper.Categories
+                    };
+                    var metadataString = JsonSerializer.Serialize(metadata, CamelCaseSerialierOptions);
 
-                var dto = new
-                {
-                    ArxivId = paper.Id,
-                    paper.Title,
-                    paper.Summary,
-                    paper.Comments,
-                    Metadata = metadataString,
-                    PdfUri = paper.PdfUri?.ToString(),
-                    paper.Published
-                };
+                    var dto = new
+                    {
+                        ArxivId = paper.Id,
+                        paper.Title,
+                        paper.Summary,
+                        paper.Comments,
+                        Metadata = metadataString,
+                        PdfUri = paper.PdfUri?.ToString(),
+                        paper.Published
+                    };
 
-                // TODO: Use ExecuteScalar and add get the id out?
-                var documentId = await _databaseConnection.ExecuteScalarAsync<int>(
-                    """
+                    // TODO: Use ExecuteScalar and add get the id out?
+                    var documentId = await _databaseConnection.ExecuteScalarAsync<int>(
+                        """
                     INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])
                     VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
                     SELECT CAST(SCOPE_IDENTITY() as int);
                     """, dto);
-                /*
-        [Id] INT IDENTITY CONSTRAINT PK_Documents primary key,
-        [ArxivId] NVARCHAR(50) NULL,
-        [Title] nvarchar(300) NOT NULL,
-        [Summary] nvarchar(max) NULL,
-        [Metadata] JSON NULL,
-        [Url] NVARCHAR(1000) NOT NULL,
-        [Published] DATETIME2(0) NOT NULL,
-        [Updated] DATETIME2(7) NULL,
-        [CreatedOn] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_CreatedUtc DEFAULT (SYSUTCDATETIME()),
-        [LastUpdatedOn] datetime2(0) NULL
-                 */
-            }
-            catch (Exception ex)
-            {
-                _logErrorStoringPaper(_logger, id, ex);
-            }
+                }
+                catch (Exception ex)
+                {
+                    _logErrorStoringPaper(_logger, id, ex);
+                }
 #pragma warning restore CA1031 // Do not catch general exception types
-
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+`           _logErrorStoringPaper(_logger, id, ex);
+            throw new ArxivApiException($"Error fetching paper info: {ex.Message}", ex);
         }
     }
 }

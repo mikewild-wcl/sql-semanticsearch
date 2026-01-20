@@ -1,3 +1,7 @@
+/* 
+Always run this during deployment in case the model location has changed, which can happen with dev tunnels.
+*/
+
 DECLARE @aiProvider NVARCHAR(20) = '$AI_PROVIDER$'
 
 PRINT 'Creating external embedding model with provider=$AI_PROVIDER$, endpoint=$AI_CLIENT_ENDPOINT$, model=$EMBEDDING_MODEL$' 
@@ -8,7 +12,6 @@ BEGIN
 
     IF EXISTS (SELECT * FROM sys.external_models WHERE name = '$EXTERNAL_EMBEDDING_MODEL$')
     BEGIN
-        PRINT 'Dropping existing external model $EXTERNAL_EMBEDDING_MODEL$'
         EXEC('DROP EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$')
     END
 

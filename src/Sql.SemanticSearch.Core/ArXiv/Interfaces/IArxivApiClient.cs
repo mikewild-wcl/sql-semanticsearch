@@ -2,7 +2,7 @@ namespace Sql.SemanticSearch.Core.ArXiv.Interfaces;
 
 public interface IArxivApiClient
 {
-    Task<ArxivPaper> GetPaperInfo(string arxivId);
+    IAsyncEnumerable<ArxivPaper> GetPaperInfo(IEnumerable<string> arxivIds, int maxItems = 10);
 
     Task<MemoryStream> DownloadPdfToMemoryStream(Uri pdfUri);
 
