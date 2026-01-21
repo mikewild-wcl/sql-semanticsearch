@@ -3,7 +3,8 @@ using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
+using Sql.SemanticSearch.Core.UnitTests.TestExtensions;
+using System.Collections.ObjectModel;
 
 namespace Sql.SemanticSearch.Core.UnitTests.ArXiv;
 
@@ -24,7 +25,7 @@ public class IngestionServiceTests
     }
 
     [Fact]
-    public async Task ProcessIndexingRequest_CallsArxivApiClient_ForEachId()
+    public async Task ProcessIndexingRequest_CallsArxivApiClient_ForMultipleId()
     {
         // Arrange
         var request = new IndexingRequest { Ids = ["id1", "id2", "id3"] };
@@ -33,18 +34,14 @@ public class IngestionServiceTests
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        ///https://www.tumblr.com/petesit/173058234308/checking-async-calls-received-in-nsubstitute
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(["id1"]).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-
-        Received.InOrder(async () =>
-        {
-            await _arxivApiClientSubstitute.Received(1).GetPaperInfo(["id1"]).FirstOrDefaultAsync();
-            //await um.CreateUserAsync(Arg.Is<User>(a => a.UserName == "b")); 
-        });
-
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(["id1"]).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(["id2"]).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(["id3"]).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+            Arg.Is<IReadOnlyCollection<string>>(p =>
+                p.Count == 3 &&
+                p.Contains("id1") &&
+                p.Contains("id2") &&
+                p.Contains("id3")),
+              Arg.Any<int>())
+            .ToListAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -57,7 +54,12 @@ public class IngestionServiceTests
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(["single-id"]).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+            Arg.Is<IReadOnlyCollection<string>>(p =>
+            p.Count == 1 &&
+            p.Contains("single-id")),
+            Arg.Any<int>())
+            .ToListAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -70,7 +72,11 @@ public class IngestionServiceTests
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        await _arxivApiClientSubstitute.DidNotReceive().GetPaperInfo(Arg.Any<IEnumerable<string>>()).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+            Arg.Is<IReadOnlyCollection<string>>(p =>
+            p.Count == 0),
+            Arg.Any<int>())
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -96,37 +102,36 @@ public class IngestionServiceTests
             Summary = "Test summary",
             PdfUri = new Uri("http://example.com/test.pdf")
         };
-        _arxivApiClientSubstitute.GetPaperInfo(Arg.Any<IEnumerable<string>>()).FirstOrDefaultAsync(TestContext.Current.CancellationToken).Returns(paper);
 
-        // Act
-        await _sut.ProcessIndexingRequest(request);
-
-        // Assert
-        await _arxivApiClientSubstitute.Received(2).GetPaperInfo(Arg.Any<IEnumerable<string>>()).ToListAsync(TestContext.Current.CancellationToken);
-    }
-
-    [Fact]
-    public async Task ProcessIndexingRequest_CallsGetPaperInfoInOrder_ForMultipleIds()
-    {
-        // Arrange
-        var request = new IndexingRequest { Ids = ["first", "second", "third"] };
-        var callOrder = new List<string>();
-
-        _arxivApiClientSubstitute.GetPaperInfo(Arg.Any<IEnumerable<string>>()).FirstOrDefaultAsync(TestContext.Current.CancellationToken)
-            .Returns(x =>
+        var papers = new Collection<ArxivPaper>
+        {
+            new("id1", "Test Title 1")
             {
-                callOrder.Add(x.Arg<string>());
-                return new ArxivPaper(x.Arg<string>(), "Title")
-                {
-                    Summary = "Test summary",
-                    PdfUri = new Uri("http://example.com/test.pdf")
-                };
-            });
+                Summary = "Test summary 1",
+                PdfUri = new Uri("http://example.com/test_1.pdf")
+            },
+            new("id1", "Test Title 2")
+            {
+                Summary = "Test summary 2",
+                PdfUri = new Uri("http://example.com/test_2.pdf")
+            }
+        };
+
+        var mockAsyncEnumerableRecords = TestMocks.MockAsyncEnumerable(papers);
+
+        _arxivApiClientSubstitute.GetPaperInfo(Arg.Any<IReadOnlyCollection<string>>(), Arg.Any <int>())
+            .Returns(mockAsyncEnumerableRecords);
 
         // Act
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        callOrder.ShouldBe(["first", "second", "third"]);
+        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+            Arg.Is<IReadOnlyCollection<string>>(p =>
+                p.Count == 2 &&
+                p.Contains("id1") &&
+                p.Contains("id2")),
+            Arg.Any<int>())
+            .ToListAsync(TestContext.Current.CancellationToken);
     }
 }

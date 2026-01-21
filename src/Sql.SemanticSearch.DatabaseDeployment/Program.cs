@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Sql.SemanticSearch.DatabaseDeployment;
 using Sql.SemanticSearch.Shared;
 using System.Globalization;
-using System.Reflection;
 
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
 
