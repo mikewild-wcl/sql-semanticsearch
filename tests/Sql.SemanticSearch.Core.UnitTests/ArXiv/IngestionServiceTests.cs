@@ -3,6 +3,7 @@ using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
+using Sql.SemanticSearch.Core.UnitTests.ArXiv.Builder;
 using Sql.SemanticSearch.Core.UnitTests.TestExtensions;
 using System.Collections.ObjectModel;
 
@@ -97,26 +98,8 @@ public class IngestionServiceTests
     {
         // Arrange
         var request = new IndexingRequest { Ids = ["id1", "id2"] };
-        var paper = new ArxivPaper("test-id", "Test Title")
-        {
-            Summary = "Test summary",
-            PdfUri = new Uri("http://example.com/test.pdf")
-        };
 
-        var papers = new Collection<ArxivPaper>
-        {
-            new("id1", "Test Title 1")
-            {
-                Summary = "Test summary 1",
-                PdfUri = new Uri("http://example.com/test_1.pdf")
-            },
-            new("id1", "Test Title 2")
-            {
-                Summary = "Test summary 2",
-                PdfUri = new Uri("http://example.com/test_2.pdf")
-            }
-        };
-
+        var papers = ArxivPaperBuilder.BuildDummyPapers();
         var mockAsyncEnumerableRecords = TestMocks.MockAsyncEnumerable(papers);
 
         _arxivApiClientSubstitute.GetPaperInfo(Arg.Any<IReadOnlyCollection<string>>(), Arg.Any <int>())

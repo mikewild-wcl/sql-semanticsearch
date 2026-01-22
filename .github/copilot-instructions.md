@@ -77,6 +77,7 @@ public class MyServiceTests
 
 ## Documentation
 - DO NOT add XML comments to public APIs.
+- DO NOT add XML documentation unless explicitly asked to do so.
 - Update README.md and CONTRIBUTING.md (if present) when introducing new patterns or requirements.
 
 ## Example Prompts

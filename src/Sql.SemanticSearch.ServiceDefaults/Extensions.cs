@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.Extensions.Hosting;
 

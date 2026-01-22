@@ -3,8 +3,6 @@ using Sql.SemanticSearch.Core.ArXiv.Exceptions;
 using Sql.SemanticSearch.Core.ArXiv.Extensions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using System.Diagnostics.CodeAnalysis;
-using System.IO.Pipes;
-using System.Linq;
 using System.Xml.Linq;
 
 namespace Sql.SemanticSearch.Core.ArXiv;
