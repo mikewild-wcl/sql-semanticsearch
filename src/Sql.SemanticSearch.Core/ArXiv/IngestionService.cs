@@ -33,10 +33,11 @@ public class IngestionService(
             new EventId(1, nameof(IngestionService)),
             "Error storing paper with id {Id} in database.");
 
-    public async Task ProcessIndexingRequest(IndexingRequest indexingRequest)
+    public async Task ProcessIndexingRequest(IndexingRequest indexingRequest, CancellationToken? cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(indexingRequest);
 
+        //TODO: Use new method and pass in cancellation token
         await foreach (var paper in _arxivApiClient.GetPaperInfo(indexingRequest.Ids))
         {
             try

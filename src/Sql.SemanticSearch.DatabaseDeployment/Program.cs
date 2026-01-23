@@ -22,6 +22,11 @@ var embeddingModel = builder.Configuration[ParameterNames.EmbeddingModel];
 var externalEbeddingModel = builder.Configuration[ParameterNames.SqlServerExternalEmbeddingModel];
 
 var ollamaEndpoint = builder.Configuration[EnvironmentVariables.OllamaTunnelEndpoint];
+
+//https://stackoverflow.com/questions/1795917/path-part-gets-overwritten-when-merging-two-uris
+//var baseUri = ollamaEndpoint.EndsWith('/') ? ollamaEndpoint : ollamaEndpoint + '/';
+if(!ollamaEndpoint?.EndsWith('/') != true) ollamaEndpoint += '/';
+
 var ollamaUri = new Uri(new Uri(ollamaEndpoint!), "api/embed"); /* SQL Server uses api/embed */
 
 var connectionString = builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase);

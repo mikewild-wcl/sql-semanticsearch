@@ -56,7 +56,7 @@ The function app expects an array called `uris` with an array of uris pointing t
 
 There is a test http script in the functions folder that can be used to call it. Alternatively call from a command line using curl:
 ```
-curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473" ] }'
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950" ] }'
 ```
 
 ## Aspire hosting and deployment

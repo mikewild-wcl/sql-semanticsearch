@@ -39,7 +39,8 @@ public class IndexDocumentsFunction(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "index-documents")]
         HttpRequest _,
         [Microsoft.Azure.Functions.Worker.Http.FromBody]
-        IndexingRequest indexingRequest)
+        IndexingRequest indexingRequest,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -51,6 +52,7 @@ public class IndexDocumentsFunction(
 
             _logFunctionTriggered(_logger, indexingRequest.Ids.Count, null);
 
+            //TODO: Pass cancellation token down the call stack
             await _ingestionService.ProcessIndexingRequest(indexingRequest);
 
             return new OkObjectResult($"Indexing request successfully processed {indexingRequest.Ids.Count} documents.");

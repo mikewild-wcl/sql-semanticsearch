@@ -22,33 +22,48 @@ public class IndexDocumentsFunctionTests
     [Fact]
     public async Task Run_ReturnsOk_ForValidIds()
     {
+        // Arrange
         var requestObj = new IndexingRequest { Ids = ["id1", "id2"] };
         var body = JsonSerializer.Serialize(requestObj);
         var httpRequest = HttpRequestBuilder.Build("POST", "/api/index-documents", body: body, contentType: "application/json");
-        var result = await _sut.Run(httpRequest, requestObj);
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal("Indexing request successfully processed 2 documents.", okResult.Value);
+
+        // Act
+        var result = await _sut.Run(httpRequest, requestObj, TestContext.Current.CancellationToken);
+
+        // Assert
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        okResult.Value.ShouldBe("Indexing request successfully processed 2 documents.");
     }
 
     [Fact]
     public async Task Run_ReturnsBadRequest_ForEmptyIds()
     {
+        // Arrange
         var requestObj = new IndexingRequest { Ids = [] };
         var body = JsonSerializer.Serialize(requestObj);
         var httpRequest = HttpRequestBuilder.Build("POST", "/api/index-documents", body: body, contentType: "application/json");
-        var result = await _sut.Run(httpRequest, requestObj);
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("No ids provided.", badRequest.Value);
+
+        // Act
+        var result = await _sut.Run(httpRequest, requestObj, TestContext.Current.CancellationToken);
+
+        // Assert
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        badRequest.Value.ShouldBe("No ids provided.");
     }
 
     [Fact]
     public async Task Run_ReturnsBadRequest_ForNullIds()
     {
+        // Arrange
         var requestObj = new IndexingRequest { Ids = null! };
         var body = JsonSerializer.Serialize(requestObj);
         var httpRequest = HttpRequestBuilder.Build("POST", "/api/index-documents", body: body, contentType: "application/json");
-        var result = await _sut.Run(httpRequest, requestObj);
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("No ids provided.", badRequest.Value);
+
+        // Act
+        var result = await _sut.Run(httpRequest, requestObj, TestContext.Current.CancellationToken);
+
+        // Assert
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        badRequest.Value.ShouldBe("No ids provided.");
     }
 }

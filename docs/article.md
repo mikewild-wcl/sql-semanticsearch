@@ -154,9 +154,16 @@ The function calls a service which calls a client class that gets papers from ar
  - Complete workflow: Get paper info and download PDF to memory stream 
  
  We'll only use the first one for now. The others will come in handy when it's time to pull down the files and save into our database.
- 
+
  
 The API calls here mean we aren't completely local-first, but that's fine for this intial version. In future a workaround can be created, e.g. a fake api that provides test data.
+
+## Testing
+
+Test the function using a POST request - use the test http script in the functions project, add a Postman request or simply use curl:
+```
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950" ] }'
+```
 
 ## Future improvements
 

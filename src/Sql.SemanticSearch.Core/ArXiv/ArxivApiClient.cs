@@ -33,8 +33,9 @@ public class ArxivApiClient(
             "PDF downloaded successfully. Size: {PdfSize} bytes");
 
     [SuppressMessage("Usage", "CA2234:Pass system uri objects instead of strings", Justification = "The HttpClient will have a base uri set.")]
-    public async IAsyncEnumerable<ArxivPaper> GetPaperInfo(IEnumerable<string> arxivIds, int maxItems = 10)
+    public async IAsyncEnumerable<ArxivPaper> GetPaperInfo(IEnumerable<string> arxivIds, int maxResults = 10)
     {
+        /*
         //try
         //{
         //ArgumentException.ThrowIfNullOrEmpty(arxivId);
@@ -50,6 +51,84 @@ public class ArxivApiClient(
 
             start += maxItems;
         } while (start < maxItems);
+        */
+        await foreach (var paper in GetPapersAsync(arxivIds, maxResults))
+        {
+            yield return paper;
+        }
+    }
+
+    [SuppressMessage("Usage", "CA2234:Pass system uri objects instead of strings", Justification = "The HttpClient will have a base uri set.")]
+    public async IAsyncEnumerable<ArxivPaper> GetPapersAsync(
+        IEnumerable<string> arxivIds,
+        int maxResults = 10,
+        CancellationToken cancellationToken = default)
+    {
+        // Clean the arXiv ID (remove version if present)
+        var idList = string.Join(',', arxivIds
+            .Select(id => id.Replace("arXiv:", "", StringComparison.InvariantCultureIgnoreCase)
+                            .Split('v')
+                            ?.FirstOrDefault()
+                            ?.Trim()));
+
+        if (string.IsNullOrWhiteSpace(idList))
+        {
+            yield break;
+        }
+
+        int start = 0;
+
+        while (true)
+        {
+            // Build query with paging parameters
+            string query = $"query?id_list={idList}&start={start}&max_results={maxResults}";
+
+            _logFetchingPaperInfo(_logger, new Uri(httpClient.BaseAddress!, query).AbsoluteUri, null);
+
+            Console.WriteLine($"[Fetching] start={start}, max={maxResults}");
+
+            var response = await httpClient.GetAsync(query, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            // Parse XML
+            string xmlContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            var doc = XDocument.Parse(xmlContent);
+
+            //TODO: Create a Namespaces static class to hold these - copy atom from the extensions file
+            XNamespace ns = "http://www.w3.org/2005/Atom";
+
+            var entries = doc.Descendants(ns + "entry").ToList();
+
+            // If no entries, we're done
+            if (entries.Count == 0)
+            {
+                //Console.WriteLine("[Complete] No more results");
+                yield break;
+            }
+
+            // Yield each paper one at a time
+            foreach (var entry in entries)
+            {
+                //string id = entry.Element(ns + "id")?.Value?.Split('/').Last();
+                //string title = entry.Element(ns + "title")?.Value?.Trim();
+
+                var paper = entry.ToArxivPaper();
+                // This is where the magic happens - yield return streams the result
+                yield return paper;
+            }
+
+            // Move to next page
+            start += maxResults;
+
+            // Rate limiting
+            if (cancellationToken.IsCancellationRequested)
+            {
+                yield break;
+            }
+
+            await Task.Delay(3000, cancellationToken);
+        }
     }
 
     public async Task<MemoryStream> DownloadPdfToMemoryStream(Uri pdfUri)
@@ -90,6 +169,7 @@ public class ArxivApiClient(
         return (paper, pdfStream);
     }
 
+    [SuppressMessage("Usage", "CA2234:Pass system uri objects instead of strings", Justification = "The HttpClient will have a base uri set.")]
     private async IAsyncEnumerable<ArxivPaper> GetPaperInfo(IEnumerable<string> arxivIds, int start, int maxItems)
     {
         //try
@@ -113,9 +193,7 @@ public class ArxivApiClient(
 
         _logFetchingPaperInfo(_logger, queryUrl, null);
 
-#pragma warning disable CA2234 // Pass system uri objects instead of strings
         var response = await _httpClient.GetAsync(queryUrl);
-#pragma warning restore CA2234 // Pass system uri objects instead of strings
         response.EnsureSuccessStatusCode();
 
         string xmlContent = await response.Content.ReadAsStringAsync();
