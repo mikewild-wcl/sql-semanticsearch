@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging;
 using Sql.SemanticSearch.Core.ArXiv.Exceptions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
+using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Sql.SemanticSearch.Core.ArXiv;
@@ -10,10 +12,12 @@ namespace Sql.SemanticSearch.Core.ArXiv;
 public class IngestionService(
     IArxivApiClient arxivApiClient,
     IDatabaseConnection databaseConnection,
+    AISettings aiSettings,
     ILogger<IngestionService> logger) : IIngestionService
 {
     private readonly IArxivApiClient _arxivApiClient = arxivApiClient;
     private readonly IDatabaseConnection _databaseConnection = databaseConnection;
+    private readonly AISettings _aiSettings = aiSettings;
     private readonly ILogger<IngestionService> _logger = logger;
 
     private static JsonSerializerOptions CamelCaseSerialierOptions = new()
@@ -33,6 +37,7 @@ public class IngestionService(
             new EventId(1, nameof(IngestionService)),
             "Error storing paper with id {Id} in database.");
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Using general exception types during development.")]
     public async Task ProcessIndexingRequest(IndexingRequest indexingRequest, CancellationToken? cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(indexingRequest);
@@ -46,7 +51,6 @@ public class IngestionService(
                 //var paper = await _arxivApiClient.GetPaperInfo(id);
                 _logDocumentIdProcessStarted(_logger, paper.Id, null);
 
-#pragma warning disable CA1031 // Do not catch general exception types
                 try
                 {
                     //await StorePaperInDatabase(paper);
@@ -57,7 +61,7 @@ public class IngestionService(
                     };
                     var metadataString = JsonSerializer.Serialize(metadata, CamelCaseSerialierOptions);
 
-                    var dto = new
+                    var document = new
                     {
                         ArxivId = paper.Id,
                         paper.Title,
@@ -68,20 +72,67 @@ public class IngestionService(
                         paper.Published
                     };
 
-                    // TODO: Use ExecuteScalar and add get the id out?
-                    var documentId = await _databaseConnection.ExecuteScalarAsync<int>(
-                        """
-                    INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])
-                    VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
-                    SELECT CAST(SCOPE_IDENTITY() as int);
-                    """, dto);
+                    //TODO: Wrap in resliience pipeline
+                    await _databaseConnection.OpenConnection();
+                    try
+                    {
+                        using var transaction = _databaseConnection.BeginTransaction();
+
+                        var documentId = await _databaseConnection.ExecuteScalarAsync<int>(
+                            """
+                            INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])                            
+                            VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
+                            SELECT CAST(SCOPE_IDENTITY() as int);
+                            """,
+                            document,
+                            transaction: transaction);
+
+                        var summaryEmbedding = new
+                        {
+                            Id = documentId,
+                            paper.Title,
+                            paper.Summary,
+                            paper.Comments,
+                            Metadata = metadataString,
+                            PdfUri = paper.PdfUri?.ToString(),
+                            paper.Published
+                        };
+
+                        await _databaseConnection.ExecuteAsync(
+                            $"""
+                            INSERT INTO dbo.DocumentSummaryEmbeddings ([Id], [Embedding])
+                            SELECT @Id,
+                                   AI_GENERATE_EMBEDDINGS(d.[Summary] USE MODEL {_aiSettings.ExternalEmbeddingModel})
+                            FROM dbo.Documents d
+                            WHERE d.[Id] = @Id
+                              AND d.[Summary] IS NOT NULL;
+                            """,
+                            new { Id = documentId },
+                            transaction: transaction);
+
+                        await _databaseConnection.ExecuteAsync(
+                            $"""
+                            INSERT INTO dbo.DocumentMetadataEmbeddings ([Id], [Embedding])
+                            SELECT @Id,
+                                   AI_GENERATE_EMBEDDINGS(CAST(d.[Metadata] AS NVARCHAR(MAX)) USE MODEL {_aiSettings.ExternalEmbeddingModel})
+                            FROM dbo.Documents d
+                            WHERE d.[Id] = @Id
+                              AND d.[Metadata] IS NOT NULL;
+                            """,
+                            new { Id = documentId },
+                            transaction: transaction);
+
+                        transaction.Commit();
+                    }
+                    finally
+                    {
+                        await _databaseConnection.CloseConnection();
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logErrorStoringPaper(_logger, paper?.Id, ex);
                 }
-#pragma warning restore CA1031 // Do not catch general exception types            
-
             }
             catch (HttpRequestException ex)
             {

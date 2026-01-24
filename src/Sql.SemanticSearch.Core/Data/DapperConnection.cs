@@ -10,6 +10,21 @@ public class DapperConnection(
 {
     private readonly SqlConnection _sqlConnection = sqlConnection;
 
+    public async Task CloseConnection()
+    {
+        await _sqlConnection.CloseAsync();
+    }
+
+    public async Task OpenConnection()
+    {
+        await _sqlConnection.OpenAsync();
+    }
+
+    public IDbTransaction BeginTransaction()
+    {
+        return _sqlConnection.BeginTransaction();
+    }
+
     public async Task<int> ExecuteAsync(string sql, object? param = null, CommandType? commandType = null, IDbTransaction? transaction = null)
     {
         if (transaction is not null)

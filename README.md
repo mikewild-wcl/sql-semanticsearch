@@ -65,6 +65,13 @@ curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: applic
 
 ## AI model clients
 
+The AI model provider needs to be set in the AppHost parameters. The options are `Ollama` or `OpenAI`.
+```
+  "Parameters": {
+    "AIModelProvider": "Ollama"
+  }
+```
+
 If you are using Ollama and have a GPU, include a parameter `OllamaGpuVendor` in the AppHost appsettings or secrets. The value can be `Nvidia` or `AMD` (or any future values from `Aspire.Hosting.OllamaGpuVendor`).
 This is added via an extension `WithGPUSupportIfVendorParameterProvided` and should match your system.
 ```

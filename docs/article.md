@@ -56,8 +56,8 @@ CREATE TABLE dbo.Documents
     [Metadata] JSON NULL,
     [PdfUri] NVARCHAR(1000) NOT NULL,
     [Published] DATETIME2(0) NOT NULL,
+    [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_Created DEFAULT (SYSUTCDATETIME()),
     [Updated] DATETIME2(7) NULL,
-    [CreatedOn] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_CreatedUtc DEFAULT (SYSUTCDATETIME()),
     [LastUpdatedOn] datetime2(0) NULL
 )
 GO
@@ -69,15 +69,17 @@ Summary and Metadata are going to be turned into vector embeddings so we have a 
 
 ``` sql
 EXEC('CREATE TABLE dbo.DocumentSummaryEmbeddings (
-    Id INT NOT NULL,
-    Embedding VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+    [Id] INT NOT NULL,
+    [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+    [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentSummaryEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
     CONSTRAINT FK_DocumentSummaryEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
 ```
 
 ``` sql
 EXEC('CREATE TABLE dbo.DocumentMetadataEmbeddings (
-    Id INT NOT NULL,
-    Embedding VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+    [Id] INT NOT NULL,
+    [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+    [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentMetadataEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
     CONSTRAINT FK_DocumentMetadataEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
 ```
 
@@ -138,7 +140,7 @@ I haven't done this because as soon as a vecttor index is created, the table bec
 -   Fast similarity functions (cosine, dot-product, Euclidean)\
 -   Hardware acceleration for vector math
 
-In a preoduction scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated. That's too much for a proof-of-concept like this! Microsoft says the read-only limitation will be removed soon so heopefully a proper index will be acheivable then.
+In a production scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated. That's too much for a proof-of-concept like this! Microsoft says the read-only limitation will be removed soon so heopefully a proper index will be acheivable then.
 
 
 

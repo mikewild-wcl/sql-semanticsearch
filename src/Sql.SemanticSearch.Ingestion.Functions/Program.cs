@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
+using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.ServiceDefaults;
@@ -12,12 +13,18 @@ var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.Services.AddOllamaResilienceHandler(); /* Should check AI provider type before adding? */
+var aiSettings = builder.Configuration.GetAISettings();
+
+if (string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddOllamaResilienceHandler();
+}
 
 builder.ConfigureFunctionsWebApplication();
 
 builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
 
+builder.Services.AddSingleton(aiSettings);
 builder.Services.AddTransient<IDatabaseConnection, DapperConnection>();
 builder.Services.AddTransient<IIngestionService, IngestionService>();
 

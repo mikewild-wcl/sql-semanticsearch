@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
+using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Requests;
 using Sql.SemanticSearch.Core.UnitTests.ArXiv.Builder;
@@ -21,6 +22,7 @@ public class IngestionServiceTests
         _sut = new IngestionService(
             _arxivApiClientSubstitute,
             _databaseConnection,
+            new AISettings("Ollama", "Test"),
             NullLogger<IngestionService>.Instance);
     }
 

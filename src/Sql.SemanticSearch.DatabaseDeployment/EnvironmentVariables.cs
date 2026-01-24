@@ -3,8 +3,6 @@
 internal static class EnvironmentVariables
 {
     public const string AIProvider = "AI_PROVIDER";
-    public const string DefaultAIProvider = "OLLAMA";
-
     public const string AIEndpoint = "AI_CLIENT_ENDPOINT";    
     public const string AIClientKey = "AI_CLIENT_KEY";
     
@@ -13,5 +11,4 @@ internal static class EnvironmentVariables
     public const string ExternalEmbeddingModel = "EXTERNAL_EMBEDDING_MODEL";
 
     public const string OllamaTunnelEndpoint = "OLLAMA_HTTP";
-
 }

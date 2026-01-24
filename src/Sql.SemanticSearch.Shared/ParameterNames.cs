@@ -2,6 +2,8 @@
 
 public static class ParameterNames
 {
+    public const string AIProvider = "AIProvider";
+
     public const string EmbeddingModel = "EmbeddingModel";
 
     public const string EmbeddingDimensions = "EmbeddingDimensions";

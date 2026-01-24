@@ -10,24 +10,25 @@ using System.Globalization;
 
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
 
+const string AlwaysRunTag = "always-run";
+
 var builder = Host.CreateApplicationBuilder();
 builder.AddServiceDefaults();
 
 using var loggerFactory = LoggerFactory.Create(builder => builder.AddSimpleConsole());
 var logger = loggerFactory.CreateLogger<Program>();
 
-var aiProvider = EnvironmentVariables.DefaultAIProvider;
+var aiProvider = builder.Configuration[ParameterNames.AIProvider];
 var embeddingDimensions = int.TryParse(builder.Configuration[ParameterNames.EmbeddingDimensions], out var dimensions) && dimensions > 0 ? dimensions : 1536;
 var embeddingModel = builder.Configuration[ParameterNames.EmbeddingModel];
-var externalEbeddingModel = builder.Configuration[ParameterNames.SqlServerExternalEmbeddingModel];
+var externalEmbeddingModel = builder.Configuration[ParameterNames.SqlServerExternalEmbeddingModel];
 
-var ollamaEndpoint = builder.Configuration[EnvironmentVariables.OllamaTunnelEndpoint];
-
-//https://stackoverflow.com/questions/1795917/path-part-gets-overwritten-when-merging-two-uris
-//var baseUri = ollamaEndpoint.EndsWith('/') ? ollamaEndpoint : ollamaEndpoint + '/';
-if(!ollamaEndpoint?.EndsWith('/') != true) ollamaEndpoint += '/';
-
-var ollamaUri = new Uri(new Uri(ollamaEndpoint!), "api/embed"); /* SQL Server uses api/embed */
+var endpoint = string.Empty;
+if (string.Equals(aiProvider, "OLLAMA", StringComparison.OrdinalIgnoreCase))
+{
+    var ollamaEndpoint = builder.Configuration[EnvironmentVariables.OllamaTunnelEndpoint];
+    endpoint = $"{ollamaEndpoint?.TrimEnd('/')}/api/embed";
+}
 
 var connectionString = builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase);
 
@@ -36,11 +37,11 @@ var serviceProvider = builder.Build().Services;
 Dictionary<string, string> variables = new()
 {
     { EnvironmentVariables.AIProvider, aiProvider.ToUpperInvariant() },
-    { EnvironmentVariables.AIEndpoint, ollamaUri.AbsoluteUri! },
+    { EnvironmentVariables.AIEndpoint, endpoint },
     //{ EnvironmentVariables.AIClientKey, Env.GetString("OPENAI_KEY")},
     { EnvironmentVariables.EmbeddingModel, embeddingModel! },
     { EnvironmentVariables.EmbeddingDimensions, embeddingDimensions.ToString("D", CultureInfo.InvariantCulture) },
-    { EnvironmentVariables.ExternalEmbeddingModel, externalEbeddingModel! }
+    { EnvironmentVariables.ExternalEmbeddingModel, externalEmbeddingModel! }
 };
 
 logger.LogInformation("Starting deployment...");
@@ -49,7 +50,7 @@ var result = DeployChanges.To
     .WithVariables(variables)
     .WithScriptsEmbeddedInAssembly(
             typeof(Program).Assembly,
-            f => !f.Contains("always-run.", StringComparison.InvariantCultureIgnoreCase))
+            f => !f.Contains(AlwaysRunTag, StringComparison.InvariantCultureIgnoreCase))
     .WithTransaction()
     .AddLoggerFromServiceProvider(serviceProvider)
     .Build()
@@ -62,7 +63,7 @@ if (result.Successful)
         .WithVariables(variables)
         .WithScriptsEmbeddedInAssembly(
             typeof(Program).Assembly,
-            f => f.Contains("always-run.", StringComparison.InvariantCultureIgnoreCase))
+            f => f.Contains(AlwaysRunTag, StringComparison.InvariantCultureIgnoreCase))
         .JournalTo(new NullJournal())
         .WithTransaction()
         .AddLoggerFromServiceProvider(serviceProvider)

@@ -4,6 +4,7 @@ using Sql.SemanticSearch.Shared;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+var aiProviderParameter = builder.AddParameter(ParameterNames.AIProvider);
 var embeddingModelParameter = builder.AddParameter(ParameterNames.EmbeddingModel);
 var embeddingDimensionsParameter = builder.AddParameter(ParameterNames.EmbeddingDimensions);
 var sqlServerExternalEmbeddingModelParameter = builder.AddParameter(ParameterNames.SqlServerExternalEmbeddingModel);
@@ -35,6 +36,7 @@ var sqlServer = builder.AddSqlServer(ResourceNames.SqlServer)
 var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(ResourceNames.DatabaseDeployment)
     .WithReference(sqlServer)
     .WithReference(ollama, devTunnel)
+    .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
     .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
     .WithEnvironment(ParameterNames.EmbeddingModel, embeddingModelParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
@@ -43,6 +45,7 @@ var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(Resourc
 
 builder.AddAzureFunctionsProject<Projects.SemanticFunctions>(ResourceNames.SemanticFunctions)
     .WithReference(sqlServer)
+    .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitForCompletion(databaseDeployment);
 

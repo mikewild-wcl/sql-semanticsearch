@@ -10,8 +10,8 @@ IF NOT EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_
         [Metadata] JSON NULL,
         [PdfUri] NVARCHAR(1000) NOT NULL,
         [Published] DATETIME2(0) NOT NULL,
+        [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_Created DEFAULT (SYSUTCDATETIME()),
         [Updated] DATETIME2(7) NULL,
-        [CreatedOn] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_CreatedUtc DEFAULT (SYSUTCDATETIME()),
         [LastUpdatedOn] datetime2(0) NULL
     )
 GO
@@ -25,14 +25,16 @@ GO
 
 IF NOT EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'DocumentSummaryEmbeddings')
     EXEC('CREATE TABLE dbo.DocumentSummaryEmbeddings (
-        Id INT NOT NULL,
-        Embedding VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+        [Id] INT NOT NULL,
+        [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+        [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentSummaryEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT FK_DocumentSummaryEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'DocumentMetadataEmbeddings')
     EXEC('CREATE TABLE dbo.DocumentMetadataEmbeddings (
-        Id INT NOT NULL,
-        Embedding VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+        [Id] INT NOT NULL,
+        [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+        [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentMetadataEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT FK_DocumentMetadataEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
 GO
