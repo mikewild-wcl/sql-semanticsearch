@@ -4,5 +4,5 @@ namespace Sql.SemanticSearch.Core.ArXiv.Interfaces;
 
 public interface IIngestionService
 {
-    Task ProcessIndexingRequest(IndexingRequest indexingRequest, CancellationToken? cancellationToken = default);
+    Task ProcessIndexingRequest(IndexingRequest indexingRequest, CancellationToken cancellationToken = default);
 }

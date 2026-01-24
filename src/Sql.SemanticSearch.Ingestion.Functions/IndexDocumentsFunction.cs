@@ -52,8 +52,7 @@ public class IndexDocumentsFunction(
 
             _logFunctionTriggered(_logger, indexingRequest.Ids.Count, null);
 
-            //TODO: Pass cancellation token down the call stack
-            await _ingestionService.ProcessIndexingRequest(indexingRequest);
+            await _ingestionService.ProcessIndexingRequest(indexingRequest, cancellationToken);
 
             return new OkObjectResult($"Indexing request successfully processed {indexingRequest.Ids.Count} documents.");
         }

@@ -36,13 +36,14 @@ public class IngestionServiceTests
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+        await _arxivApiClientSubstitute.Received(1).GetPapers(
             Arg.Is<IReadOnlyCollection<string>>(p =>
                 p.Count == 3 &&
                 p.Contains("id1") &&
                 p.Contains("id2") &&
                 p.Contains("id3")),
-            Arg.Any<int>())
+            Arg.Any<int>(),
+            Arg.Any<CancellationToken>())
             .ToListAsync(TestContext.Current.CancellationToken);
     }
 
@@ -56,11 +57,12 @@ public class IngestionServiceTests
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+        await _arxivApiClientSubstitute.Received(1).GetPapers(
             Arg.Is<IReadOnlyCollection<string>>(p =>
                 p.Count == 1 &&
                 p.Contains("single-id")),
-            Arg.Any<int>())
+            Arg.Any<int>(),
+            Arg.Any<CancellationToken>())
             .ToListAsync(TestContext.Current.CancellationToken);
     }
 
@@ -74,9 +76,10 @@ public class IngestionServiceTests
         await _sut.ProcessIndexingRequest(request);
 
         // Assert
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+        await _arxivApiClientSubstitute.Received(1).GetPapers(
             Arg.Is<IReadOnlyCollection<string>>(p => p.Count == 0),
-            Arg.Any<int>())
+            Arg.Any<int>(),
+            Arg.Any<CancellationToken>())
             .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
     }
 
@@ -102,19 +105,23 @@ public class IngestionServiceTests
         var papers = ArxivPaperBuilder.BuildDummyPapers();
         var mockAsyncEnumerableRecords = TestMocks.MockAsyncEnumerable(papers);
 
-        _arxivApiClientSubstitute.GetPaperInfo(Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<int>())
+        _arxivApiClientSubstitute.GetPapers(
+            Arg.Any<IReadOnlyCollection<string>>(),
+            Arg.Any<int>(),
+            Arg.Any<CancellationToken>())
             .Returns(mockAsyncEnumerableRecords);
 
         // Act
-        await _sut.ProcessIndexingRequest(request);
+        await _sut.ProcessIndexingRequest(request, TestContext.Current.CancellationToken);
 
         // Assert
-        await _arxivApiClientSubstitute.Received(1).GetPaperInfo(
+        await _arxivApiClientSubstitute.Received(1).GetPapers(
             Arg.Is<IReadOnlyCollection<string>>(p =>
                 p.Count == 2 &&
                 p.Contains("id1") &&
                 p.Contains("id2")),
-            Arg.Any<int>())
+            Arg.Any<int>(),
+            Arg.Any<CancellationToken>())
             .ToListAsync(TestContext.Current.CancellationToken);
     }
 }
