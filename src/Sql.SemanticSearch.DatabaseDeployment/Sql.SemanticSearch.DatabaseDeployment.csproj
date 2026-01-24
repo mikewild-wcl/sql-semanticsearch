@@ -5,17 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="sql\00-server-configuration.sql" />
-    <None Remove="sql\01-schemas.sql" />
-    <None Remove="sql\02-security.sql" />
     <None Remove="sql\04-tables.sql" />
     <None Remove="sql\20-seed-data.sql" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="sql\00-server-configuration.sql" />
-    <EmbeddedResource Include="sql\01-schemas.sql" />
-    <EmbeddedResource Include="sql\02-security.sql" />
+    <EmbeddedResource Include="sql\00-enable-preview-features.sql" />
+    <EmbeddedResource Include="sql\01-server-configuration.sql" />
+    <EmbeddedResource Include="sql\02-schemas.sql" />
+    <EmbeddedResource Include="sql\03-security.sql" />
     <EmbeddedResource Include="sql\11-always-run-create-external-model.sql" />
     <EmbeddedResource Include="sql\04-tables.sql" />
     <EmbeddedResource Include="sql\20-seed-data.sql" />

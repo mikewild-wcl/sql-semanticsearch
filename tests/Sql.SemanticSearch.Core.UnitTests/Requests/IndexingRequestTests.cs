@@ -1,4 +1,4 @@
-﻿using Sql.SemanticSearch.Core.Requests;
+﻿using Sql.SemanticSearch.Core.Messages;
 using System.Text.Json;
 
 namespace Sql.SemanticSearch.Core.UnitTests.Requests;

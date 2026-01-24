@@ -21,6 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="NSubstitute" />
+    <Using Include="Shouldly" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Sql.SemanticSearch.Core\Sql.SemanticSearch.Core.csproj" />
   </ItemGroup>
 

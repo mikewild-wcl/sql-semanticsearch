@@ -1,4 +1,4 @@
-using Sql.SemanticSearch.Core.Requests;
+using Sql.SemanticSearch.Core.Messages;
 
 namespace Sql.SemanticSearch.Core.ArXiv.Interfaces;
 

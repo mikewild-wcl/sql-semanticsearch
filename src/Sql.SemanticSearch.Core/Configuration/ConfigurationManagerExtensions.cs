@@ -13,6 +13,7 @@ public static class ConfigurationManagerExtensions
         {
             var aiProvider = configurationManager[ParameterNames.AIProvider];
             var externalEmbeddingModel = configurationManager[ParameterNames.SqlServerExternalEmbeddingModel];
+            var embeddingDimensions = configurationManager[ParameterNames.EmbeddingDimensions];
 
             if (string.IsNullOrWhiteSpace(aiProvider) || string.IsNullOrWhiteSpace(externalEmbeddingModel))
             {
@@ -20,9 +21,17 @@ public static class ConfigurationManagerExtensions
                     $"Missing configuration. Both {ParameterNames.AIProvider} and {ParameterNames.SqlServerExternalEmbeddingModel} are required.");
             }
 
+            var embeddingModelDimensions = int.TryParse(embeddingDimensions, out var dimensions) 
+                                           && dimensions > 0
+                ? dimensions
+                : Defaults.DefaultEmbeddingDimensions;
+
             return new AISettings(
                 Provider: aiProvider,
-                ExternalEmbeddingModel: externalEmbeddingModel);
+                ExternalEmbeddingModel: externalEmbeddingModel)
+            {
+                EmbeddingModelDimensions = embeddingModelDimensions
+            };
         }
     }
 }

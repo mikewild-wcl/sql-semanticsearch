@@ -25,7 +25,7 @@ GO
 
 IF NOT EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'DocumentSummaryEmbeddings')
     EXEC('CREATE TABLE dbo.DocumentSummaryEmbeddings (
-        [Id] INT NOT NULL [PK_DocumentSummaryEmbeddings] PRIMARY KEY,
+        [Id] INT NOT NULL CONSTRAINT [PK_DocumentSummaryEmbeddings] PRIMARY KEY,
         [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
         [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentSummaryEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT FK_DocumentSummaryEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
@@ -33,7 +33,7 @@ GO
 
 IF NOT EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'DocumentMetadataEmbeddings')
     EXEC('CREATE TABLE dbo.DocumentMetadataEmbeddings (
-        [Id] INT NOT NULL [PK_DocumentMetadataEmbeddings] PRIMARY KEY,
+        [Id] INT NOT NULL CONSTRAINT [PK_DocumentMetadataEmbeddings] PRIMARY KEY,
         [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
         [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentMetadataEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT FK_DocumentMetadataEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')

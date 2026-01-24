@@ -9,17 +9,17 @@ Uses SQL Server 2025 and Azure SQL vector capabilities to ingest and embed docum
 ## Project structure
 
 sql-semanticsearch/
-├── Sql.Vector.Embeddings.AppHost
-├── Sql.Vector.Embeddings.BlobUploadConsole
-├── Sql.Vector.Embeddings.DatabaseDeploymentService
-├── Sql.Vector.Embeddings.Ingestion.Functions
-├── Sql.Vector.Embeddings.Ingestion.Core
-├── Sql.Vector.Embeddings.QueryConsole
-├── Sql.Vector.Embeddings.Data
-├── Sql.Vector.Embeddings.Ingestion.Core
+├── Sql.Vector.SemanticSearch.AppHost
+├── Sql.Vector.SemanticSearch.Core
+├── Sql.Vector.SemanticSearch.DatabaseDeploymentService
+├── Sql.Vector.SemanticSearch.Ingestion.Functions
+├── Sql.Vector.SemanticSearch.Query.Functions
+├── Sql.Vector.SemanticSearch.Shared
 │   Tests
-│   ├── Sql.Vector.Embeddings.Data.UnitTests
-│   ├── Sql.Vector.Embeddings.Ingestion.Core.UnitTests
+│   ├── Sql.SemanticSearch.Ingestion.Functions.UnitTests
+│   ├── Sql.SemanticSearch.Query.Functions.UnitTests
+│   ├── Sql.Vector.Embeddings.SemanticSearch.Core.UnitTests
+│   ├── Sql.SemanticSearch.Tests.Helpers
 ├── .editorconfig
 ├── .gitignore
 ├── README.md

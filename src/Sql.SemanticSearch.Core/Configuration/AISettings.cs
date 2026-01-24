@@ -2,4 +2,7 @@
 
 public record AISettings(
     string Provider,
-    string ExternalEmbeddingModel);
+    string ExternalEmbeddingModel)
+{
+    public int EmbeddingModelDimensions { get; init; }
+}

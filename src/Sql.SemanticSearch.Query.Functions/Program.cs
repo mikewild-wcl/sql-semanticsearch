@@ -1,11 +1,11 @@
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sql.SemanticSearch.Core.ArXiv;
-using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
+using Sql.SemanticSearch.Core.Search;
+using Sql.SemanticSearch.Core.Search.Interfaces;
 using Sql.SemanticSearch.ServiceDefaults;
 using Sql.SemanticSearch.Shared;
 
@@ -27,11 +27,7 @@ builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
 builder.Services
     .AddSingleton(aiSettings)
     .AddTransient<IDatabaseConnection, DapperConnection>()
-    .AddTransient<IIngestionService, IngestionService>();
-
-builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>
-{
-    client.BaseAddress = new("http://export.arxiv.org/api/");
-});
+    .AddTransient<ISearchService, SearchService>();
 
 await builder.Build().RunAsync().ConfigureAwait(true);
+

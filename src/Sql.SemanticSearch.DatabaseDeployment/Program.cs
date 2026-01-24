@@ -11,6 +11,7 @@ using System.Globalization;
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
 
 const string AlwaysRunTag = "always-run";
+const string EnablePreviewFeaturesTag = "enable-preview-features";
 
 var builder = Host.CreateApplicationBuilder();
 builder.AddServiceDefaults();
@@ -19,9 +20,13 @@ using var loggerFactory = LoggerFactory.Create(builder => builder.AddSimpleConso
 var logger = loggerFactory.CreateLogger<Program>();
 
 var aiProvider = builder.Configuration[ParameterNames.AIProvider];
-var embeddingDimensions = int.TryParse(builder.Configuration[ParameterNames.EmbeddingDimensions], out var dimensions) && dimensions > 0 ? dimensions : 1536;
 var embeddingModel = builder.Configuration[ParameterNames.EmbeddingModel];
 var externalEmbeddingModel = builder.Configuration[ParameterNames.SqlServerExternalEmbeddingModel];
+
+var embeddingDimensions = int.TryParse(builder.Configuration[ParameterNames.EmbeddingDimensions], out var dimensions)
+                          && dimensions > 0
+        ? dimensions
+        : Defaults.DefaultEmbeddingDimensions;
 
 var endpoint = string.Empty;
 if (string.Equals(aiProvider, "OLLAMA", StringComparison.OrdinalIgnoreCase))
@@ -45,7 +50,20 @@ Dictionary<string, string> variables = new()
 };
 
 logger.LogInformation("Starting deployment...");
+
 var result = DeployChanges.To
+    .SqlDatabase(connectionString)
+    .WithVariables(variables)
+    .WithScriptsEmbeddedInAssembly(
+            typeof(Program).Assembly,
+            f => f.Contains(EnablePreviewFeaturesTag, StringComparison.InvariantCultureIgnoreCase))
+    .AddLoggerFromServiceProvider(serviceProvider)
+    .Build()
+    .PerformUpgrade();
+
+if (result.Successful)
+{
+    result = DeployChanges.To
     .SqlDatabase(connectionString)
     .WithVariables(variables)
     .WithScriptsEmbeddedInAssembly(
@@ -55,6 +73,7 @@ var result = DeployChanges.To
     .AddLoggerFromServiceProvider(serviceProvider)
     .Build()
     .PerformUpgrade();
+}
 
 if (result.Successful)
 {

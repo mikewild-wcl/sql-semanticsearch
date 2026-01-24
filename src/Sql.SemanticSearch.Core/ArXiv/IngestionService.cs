@@ -4,7 +4,7 @@ using Sql.SemanticSearch.Core.ArXiv.Extensions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
-using Sql.SemanticSearch.Core.Requests;
+using Sql.SemanticSearch.Core.Messages;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Sql.SemanticSearch.Core.ArXiv;

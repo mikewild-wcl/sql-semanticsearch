@@ -13,11 +13,3 @@ BEGIN
 	RECONFIGURE WITH OVERRIDE;
 END
 GO
-
-IF(NOT EXISTS(SELECT [value] FROM sys.database_scoped_configurations WHERE [name] = 'PREVIEW_FEATURES' AND [value] = 1))
-BEGIN
-	PRINT 'Turning on preview features'
-	ALTER DATABASE SCOPED CONFIGURATION
-	SET PREVIEW_FEATURES = ON;
-END
-GO

@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
-using Sql.SemanticSearch.Core.Requests;
-using Sql.SemanticSearch.Ingestion.Functions.UnitTests.Builders;
+using Sql.SemanticSearch.Core.Messages;
+using Sql.SemanticSearch.Tests.Helpers.Builders;
 using System.Text.Json;
 
 namespace Sql.SemanticSearch.Ingestion.Functions.UnitTests;

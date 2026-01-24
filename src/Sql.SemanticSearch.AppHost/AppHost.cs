@@ -43,10 +43,17 @@ var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(Resourc
     .WaitFor(devTunnel)
     .WaitFor(sqlServer);
 
-builder.AddAzureFunctionsProject<Projects.SemanticFunctions>(ResourceNames.SemanticFunctions)
+builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.IngestionFunctions)
     .WithReference(sqlServer)
     .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
+    .WaitForCompletion(databaseDeployment);
+
+builder.AddAzureFunctionsProject<Projects.SemanticSearchFunctions>(ResourceNames.QueryFunctions)
+    .WithReference(sqlServer)
+    .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
+    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
+    .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
     .WaitForCompletion(databaseDeployment);
 
 await builder.Build().RunAsync().ConfigureAwait(true);

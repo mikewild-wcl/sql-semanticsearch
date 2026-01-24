@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
-using Sql.SemanticSearch.Core.Requests;
+using Sql.SemanticSearch.Core.Messages;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Sql.SemanticSearch.Ingestion.Functions;
@@ -20,13 +20,13 @@ public class IndexDocumentsFunction(
         LoggerMessage.Define<int>(
             LogLevel.Information,
             new EventId(0, nameof(IndexDocumentsFunction)),
-            "IngestFromUriFunction http function triggered with {Count} document ids.");
+            "Indexing function http trigger called with {Count} document ids.");
 
     private static readonly Action<ILogger, Exception?> _logNullOrEmptyIndexingRequestWarning =
         LoggerMessage.Define(
             LogLevel.Warning,
             new EventId(0, nameof(IndexDocumentsFunction)),
-            "IngestFromUriFunction called with no document ids.");
+            "Indexing function called with no document ids.");
 
     private static readonly Action<ILogger, Exception?> _logFunctionFailed =
         LoggerMessage.Define(
@@ -61,6 +61,5 @@ public class IndexDocumentsFunction(
             _logFunctionFailed(_logger, ex);
             return new StatusCodeResult(StatusCodes.Status500InternalServerError);
         }
-
     }
 }

@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Sql.SemanticSearch.Ingestion.Functions.UnitTests</RootNamespace>
+    <RootNamespace>Sql.SemanticSearch.Query.Functions.UnitTests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" />
+    <ProjectReference Include="..\..\src\Sql.SemanticSearch.Query.Functions\Sql.SemanticSearch.Query.Functions.csproj" />
     <ProjectReference Include="..\Sql.SemanticSearch.Tests.Helpers\Sql.SemanticSearch.Tests.Helpers.csproj" />
   </ItemGroup>
-
+  
 </Project>

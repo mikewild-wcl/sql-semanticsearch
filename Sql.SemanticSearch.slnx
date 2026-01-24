@@ -8,11 +8,14 @@
   <Folder Name="/Tests/">
     <Project Path="tests/Sql.SemanticSearch.Core.UnitTests/Sql.SemanticSearch.Core.UnitTests.csproj" />
     <Project Path="tests/Sql.SemanticSearch.Ingestion.Functions.UnitTests/Sql.SemanticSearch.Ingestion.Functions.UnitTests.csproj" />
+    <Project Path="tests/Sql.SemanticSearch.Query.Functions.UnitTests/Sql.SemanticSearch.Query.Functions.UnitTests.csproj" Id="ecb82171-484a-463e-9581-24424554b902" />
+    <Project Path="tests/Sql.SemanticSearch.Tests.Helpers/Sql.SemanticSearch.Tests.Helpers.csproj" Id="6e28072c-969e-478f-8223-0a74e9f48e31" />
   </Folder>
   <Project Path="src/Sql.SemanticSearch.AppHost/Sql.SemanticSearch.AppHost.csproj" />
   <Project Path="src/Sql.SemanticSearch.Core/Sql.SemanticSearch.Core.csproj" />
   <Project Path="src/Sql.SemanticSearch.DatabaseDeployment/Sql.SemanticSearch.DatabaseDeployment.csproj" Id="f474f503-a06d-4dad-a819-955c28875b5f" />
   <Project Path="src/Sql.SemanticSearch.Ingestion.Functions/Sql.SemanticSearch.Ingestion.Functions.csproj" />
+  <Project Path="src/Sql.SemanticSearch.Query.Functions/Sql.SemanticSearch.Query.Functions.csproj" />
   <Project Path="src/Sql.SemanticSearch.ServiceDefaults/Sql.SemanticSearch.ServiceDefaults.csproj" />
   <Project Path="src/Sql.SemanticSearch.Shared/Sql.SemanticSearch.Shared.csproj" />
 </Solution>

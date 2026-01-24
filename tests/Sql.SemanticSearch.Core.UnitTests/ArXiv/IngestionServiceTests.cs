@@ -3,7 +3,7 @@ using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
-using Sql.SemanticSearch.Core.Requests;
+using Sql.SemanticSearch.Core.Messages;
 using Sql.SemanticSearch.Core.UnitTests.ArXiv.Builder;
 using Sql.SemanticSearch.Core.UnitTests.TestExtensions;
 

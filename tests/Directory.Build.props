@@ -5,12 +5,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Using Include="NSubstitute" />
-    <Using Include="Shouldly" />
-    <Using Include="Xunit" />
-  </ItemGroup>
-
   <PropertyGroup>
     <AnalysisLevel>Latest</AnalysisLevel>
     <AnalysisMode>All</AnalysisMode>

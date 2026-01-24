@@ -13,8 +13,7 @@ public sealed class ArxivPdfDownloadException : Exception
     {
     }
 
-    public ArxivPdfDownloadException(string message, Exception? innerException = null)
-        : base(message, innerException)
+    public ArxivPdfDownloadException(string message, Exception? innerException) : base(message, innerException)
     {
     }
 }
