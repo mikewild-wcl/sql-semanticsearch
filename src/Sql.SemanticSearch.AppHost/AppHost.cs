@@ -50,13 +50,6 @@ builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.Inge
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitForCompletion(databaseDeployment);
 
-builder.AddAzureFunctionsProject<Projects.SemanticSearchFunctions>(ResourceNames.QueryFunctions)
-    .WithReference(sqlServer)
-    .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
-    .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
-    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
-    .WaitForCompletion(databaseDeployment);
-
 var api = builder.AddProject<Projects.Api>(ResourceNames.Api)
     .WithReference(sqlServer)
     .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
