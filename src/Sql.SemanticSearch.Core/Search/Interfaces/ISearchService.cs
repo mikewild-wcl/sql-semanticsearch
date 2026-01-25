@@ -4,5 +4,5 @@ namespace Sql.SemanticSearch.Core.Search.Interfaces;
 
 public interface ISearchService
 {
-    Task<IEnumerable<string>> Search(SearchRequest searchRequest, CancellationToken cancellationToken = default);
+    Task<IEnumerable<SearchResultItem>> Search(SearchRequest searchRequest, CancellationToken cancellationToken = default);
 }

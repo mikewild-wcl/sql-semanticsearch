@@ -9,9 +9,9 @@
             "enableLiveMetricsFilters": true
         }
     },
-    "extensions": {
-        "http": {
-            "routePrefix": "api"
-        }
+  "extensions": {
+    "http": {
+      "routePrefix": "api"
     }
+  }
 }

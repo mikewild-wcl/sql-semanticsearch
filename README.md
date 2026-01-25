@@ -51,13 +51,26 @@ The embedding model is created in the database deployment scripts. The external 
   }
 ```
 
-## Call function app
+## Call function app and API
 
 The function app expects an array called `uris` with an array of uris pointing to pdf files. 
 
-There is a test http script in the functions folder that can be used to call it. Alternatively call from a command line using curl:
+There is a test script `Functions.http` in the functions folder that can be used to call it. If you have a lot of requests the call could timeout easily, so I recommend increasing the timeout. In Visual Studio go to Tools..Options, search for `REST advanced` and you will see a timeout - set to something more than the default 20 seconds. 
+![Where to set REST request timeout.](./images/vs_rest_timeout.png)
+
+A timeout can also be set in `host.json` for the function app, but this can't be longer than the time for the plan the function runs under, so it probably won't make a difference.
 ```
-curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950" ] }'
+  "functionTimeout": "00:05:00"
+```
+
+Alternatively call from a command line using curl.
+```
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950"] }'
+```
+
+To call the API
+```
+curl -X POST https://sql-semanticsearch-api-sql_semanticsearch.dev.localhost:7253/api/search -H "Content-Type: application/json" -d '{"query": "Find papers on Gen AI"}'
 ```
 
 ## Aspire hosting and deployment

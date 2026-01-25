@@ -112,7 +112,7 @@ FROM sys.external_models
   - insert and create embedding
   - simple approach; in production it might be better to send a message to another function via a queue or ServiceBus and do the embedding there
     - also mention article on SQL trigger that will do the embedding for us
-  - search query - takes a string and returns search reasults. Can test using curl or Postman for simplicity, so no need for an extra web or console app
+  - search query - takes a string and returns search reasults. Can test using curl or Postman for simplicity, so no need for an extra web or console app.
 
 ``` csharp
 ```
@@ -165,6 +165,31 @@ The API calls here mean we aren't completely local-first, but that's fine for th
 Test the function using a POST request - use the test http script in the functions project, add a Postman request or simply use curl:
 ```
 curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950" ] }'
+```
+
+When adding a lot of ids it can run for a while, so I don't recommend sending large requests.
+
+I increased the REST API timeout in Visual Studio (go to Tools..Options, search for `REST advanced`) so I could send a reasonably large request from unless you increase the timeout. See the README for details.
+
+![Where to set REST request timeout.](./images/vs_rest_timeout.png)
+
+Valid arxiv ids look like `1409.0473` or `hep-th/9901001` (pre-2007). For more see [Understanding the arXiv identifier](https://info.arxiv.org/help/arxiv_identifier.html).
+There is minimal validation and de-duplication of the ids in the code. I added a regex:
+``` csharp
+var arxivRegex = new Regex(
+    @"^(?:\d{4}\.\d{4,5}|[a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?$",
+    RegexOptions.IgnoreCase);
+```
+Breakdown:
+```
+^
+(?:                              # Either:
+  \d{4}\.\d{4,5}                  #   New-style: YYMM.NNNN or YYMM.NNNNN
+  |                               #   OR
+  [a-z\-]+(?:\.[A-Z]{2})?/\d{7}   #   Old-style: archive(.SUB)/YYMMNNN
+)
+(?:v\d+)?                         # Optional version suffix
+$
 ```
 
 ## Future improvements

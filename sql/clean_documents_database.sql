@@ -2,7 +2,15 @@
 Drops all the tables from the Documents database.
 Also drops the DbUp journal file so the deployment can be rerun.
 
-WARNING: This removes everything!
+WARNING: This removes everything! If you just want to remove document data use this:
+
+DELETE dbo.DocumentSummaryEmbeddings
+--DELETE dbo.DocumentCommentEmbeddings
+DELETE dbo.DocumentMetadataEmbeddings
+--DELETE dbo.DocumentChunkEmbeddings
+--DELETE dbo.DocumentChunks
+DELETE dbo.Documents
+
 */
 
 IF EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'Documents')

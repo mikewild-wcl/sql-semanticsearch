@@ -1,0 +1,13 @@
+@Api_HostAddress = http://localhost:5266
+
+POST {{Api_HostAddress}}/api/search/
+Content-Type: application/json
+Accept: application/json
+
+{
+  "query": "1207.0580",
+  "metadata": "",
+  "top_k": 5
+}
+
+###

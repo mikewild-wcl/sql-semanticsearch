@@ -40,12 +40,17 @@ public class ArxivApiClient(
         [EnumeratorCancellation]
         CancellationToken cancellationToken = default)
     {
-        // Clean the arXiv ID (remove version if present)
-        var idList = string.Join(',', arxivIds
-            .Select(id => id.Replace("arXiv:", "", StringComparison.InvariantCultureIgnoreCase)
-                            .Split('v')
-                            ?.FirstOrDefault()
-                            ?.Trim()));
+        // Clean the arXiv IDs (remove version if present, only inc;lude valid ids)
+        var validIds = arxivIds
+            .Select(id => id?.Replace("arXiv:", "", StringComparison.InvariantCultureIgnoreCase)?.Trim())
+            .Where(id => id is not null && id.IsValidId())
+            .Distinct()
+            .ToList();
+
+        var idList = string.Join(',', validIds
+            .Select(id => id.Split('v')[0]
+                            //?.FirstOrDefault())
+            ));
 
         if (string.IsNullOrWhiteSpace(idList))
         {
@@ -91,7 +96,7 @@ public class ArxivApiClient(
                 yield break;
             }
 
-            if (processed < arxivIds.Count())
+            if (processed < validIds.Count)
             {
                 await Task.Delay(3000, cancellationToken); // Rate limiting
             }
