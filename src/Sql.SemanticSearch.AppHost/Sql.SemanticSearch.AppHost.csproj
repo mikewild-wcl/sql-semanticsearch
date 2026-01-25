@@ -10,9 +10,11 @@
     <PackageReference Include="Aspire.Hosting.DevTunnels" />
     <PackageReference Include="Aspire.Hosting.SqlServer" />
     <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" />
+    <PackageReference Include="Scalar.Aspire" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sql.SemanticSearch.Api\Sql.SemanticSearch.Api.csproj" AspireProjectMetadataTypeName="Api" />
     <ProjectReference Include="..\Sql.SemanticSearch.DatabaseDeployment\Sql.SemanticSearch.DatabaseDeployment.csproj" AspireProjectMetadataTypeName="DatabaseDeployment" />
     <ProjectReference Include="..\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" AspireProjectMetadataTypeName="IngestionFunctions" />
     <ProjectReference Include="..\Sql.SemanticSearch.Query.Functions\Sql.SemanticSearch.Query.Functions.csproj" AspireProjectMetadataTypeName="SemanticSearchFunctions" />

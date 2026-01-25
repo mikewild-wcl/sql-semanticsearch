@@ -73,8 +73,15 @@ Note for future changes: https://elanderson.net/2020/08/always-run-migrations-wi
 ## Fake arXiv API
 Last time I mentioned that we aren't completely local-first because the functions call an exteral API to get metadata and (in future) download files. We can work around this by setting up a local test fake version of the API. That's pretty easy so let's do that now.
 
+## API project
 
-
+Added `Scalar.Aspire` to the AppHost to provide a front end for OpenAPI.
+```
+using Scalar.Aspire;
+...
+builder.AddScalarApiReference()
+    .WithApiReference(api);
+```
 
 ### Source code
 [!NOTE] 

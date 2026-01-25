@@ -13,6 +13,8 @@
     <PackageVersion Include="DbUp" Version="5.0.41" />
     <PackageVersion Include="DbUp.Extensions.Microsoft.Logging" Version="1.1.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.51.0" />
     <PackageVersion Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="2.50.0" />
     <PackageVersion Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
@@ -31,6 +33,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
+    <!--<PackageVersion Include="Scalar.AspNetCore" Version="2.11.5" />-->
+    <PackageVersion Include="Scalar.Aspire" Version="0.8.27" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.18.0.131500" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

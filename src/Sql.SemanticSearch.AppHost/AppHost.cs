@@ -1,3 +1,4 @@
+using Scalar.Aspire;
 using Sql.SemanticSearch.AppHost.Extensions;
 using Sql.SemanticSearch.AppHost.ParameterDefaults;
 using Sql.SemanticSearch.Shared;
@@ -52,8 +53,18 @@ builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.Inge
 builder.AddAzureFunctionsProject<Projects.SemanticSearchFunctions>(ResourceNames.QueryFunctions)
     .WithReference(sqlServer)
     .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
-    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
+    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitForCompletion(databaseDeployment);
+
+var api = builder.AddProject<Projects.Api>(ResourceNames.Api)
+    .WithReference(sqlServer)
+    .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
+    .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
+    .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
+    .WaitForCompletion(databaseDeployment);
+
+builder.AddScalarApiReference()
+    .WithApiReference(api);
 
 await builder.Build().RunAsync().ConfigureAwait(true);

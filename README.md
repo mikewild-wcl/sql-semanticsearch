@@ -10,6 +10,7 @@ Uses SQL Server 2025 and Azure SQL vector capabilities to ingest and embed docum
 
 sql-semanticsearch/
 ├── Sql.Vector.SemanticSearch.AppHost
+├── Sql.SemanticSearch.Api
 ├── Sql.Vector.SemanticSearch.Core
 ├── Sql.Vector.SemanticSearch.DatabaseDeploymentService
 ├── Sql.Vector.SemanticSearch.Ingestion.Functions
@@ -85,6 +86,18 @@ This is added via an extension `WithGPUSupportIfVendorParameterProvided` and sho
 The ingestion function uses the [arXiv API](https://info.arxiv.org/help/api/index.html) to load document metadata and then to download documents.
 Thank you to arXiv for use of its open access interoperability.
 
+## API
+
+The API project contains a simple web api to query the database. It has a single endpoint `/search` that takes a query string parameter and returns the top 10 results from the database.
+
+The API uses Scalar to expose OpenAPI information.
+
+Scalar has been added to the AppHost - see [Scalar API Reference for .NET Aspire](https://scalar.com/products/api-references/integrations/aspire).
+
+OpenApi has been implemented for the web application and enabled when running in development mode.
+To see the OpenApi specification browse to https://localhost:7185/openapi/v1.json
+
+Scalar has also been included, and can be used to test the API at https://<uri>>:<port>>/scalar/v1. 
 
 
 
