@@ -58,26 +58,20 @@ public class IngestionService(
             }
         }
     }
-    
+
     private async Task Save(ArxivPaper paper)
     {
-        //await _databaseConnection.OpenConnection();
-        //try
-        //{
-            using var transaction = _databaseConnection.BeginTransaction();
+        using var connection = _databaseConnection.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
 
-            await DeleteExistingDocumentIfExists(paper.Id, transaction);
+        await DeleteExistingDocumentIfExists(paper.Id, transaction);
 
-            var documentId = await SaveDocument(paper, transaction);            
-            await SaveDocumentSummaryEmbeddings(documentId, transaction);
-            await SaveDocumentMetadataEmbeddings(documentId, transaction);
-            
-            transaction.Commit();
-        //}
-        //finally
-        //{
-        //    await _databaseConnection.CloseConnection();
-        //}
+        var documentId = await SaveDocument(paper, transaction);
+        await SaveDocumentSummaryEmbeddings(documentId, transaction);
+        await SaveDocumentMetadataEmbeddings(documentId, transaction);
+
+        transaction.Commit();
     }
 
     private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>
@@ -94,7 +88,7 @@ public class IngestionService(
             """,
             new { ArxivId = arxivId },
             transaction: transaction);
-    
+
     private async Task<int> SaveDocument(ArxivPaper paper, System.Data.IDbTransaction transaction) =>
         await _databaseConnection.ExecuteScalarAsync<int>(
             """
@@ -114,13 +108,14 @@ public class IngestionService(
                 paper.Published
             },
             transaction: transaction);
-     
+
+    /* Note: Embedding model is *NOT* a SQL injection risk, it must be hard-coded so we have to use the settings value. */
     private async Task SaveDocumentSummaryEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
         await _databaseConnection.ExecuteAsync(
             $"""
             INSERT INTO dbo.DocumentSummaryEmbeddings ([Id], [Embedding])
             SELECT @Id,
-                    AI_GENERATE_EMBEDDINGS(d.[Summary] USE MODEL {_aiSettings.ExternalEmbeddingModel})
+                   AI_GENERATE_EMBEDDINGS(d.[Summary] USE MODEL {_aiSettings.ExternalEmbeddingModel})
             FROM dbo.Documents d
             WHERE d.[Id] = @Id
                 AND d.[Summary] IS NOT NULL;

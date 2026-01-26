@@ -66,7 +66,6 @@ A timeout can also be set in `host.json` for the function app, but this can't be
 Alternatively call from a command line using curl.
 ```
 curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950"] }'
-curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1110.2832","1609.09047","hep-th/0310077v2","1204.0162","0711.4114","hep-th/9908205","physics/0702069"] }'
 ```
 
 > [!Tip]

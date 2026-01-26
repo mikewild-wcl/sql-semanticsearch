@@ -4,13 +4,18 @@ using System.Xml.Linq;
 namespace Sql.SemanticSearch.Core.ArXiv.Extensions;
 
 [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Extension members don't need to be static")]
-internal static class ArxivElementExtensionss
+internal static class ArxivElementExtensions
 {
     extension(XElement? entry)
     {
-        public ArxivPaper ToArxivPaper()
+        public ArxivPaper? ToArxivPaper()
         {
+            if (entry is null) return null;
+
             var entryId = entry.Element(ArxivNamespace.Atom + "id")?.Value;
+
+            if (string.IsNullOrEmpty(entryId)) return null;
+
             var id = entryId.ToShortId();
 
             var pdfLink = entry.Descendants(ArxivNamespace.Atom + "link")

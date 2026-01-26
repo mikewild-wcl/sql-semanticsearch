@@ -6,12 +6,6 @@ public interface IDatabaseConnection
 {
     public IDbConnection CreateConnection();
 
-    Task CloseConnection();
-
-    Task OpenConnection();
-
-    IDbTransaction BeginTransaction();
-
     Task<int> ExecuteAsync(string sql, object? param = null, CommandType? commandType = null, IDbTransaction? transaction = null);
 
     Task<T?> ExecuteScalarAsync<T>(string sql, object? param = null, CommandType? commandType = null, IDbTransaction? transaction = null);

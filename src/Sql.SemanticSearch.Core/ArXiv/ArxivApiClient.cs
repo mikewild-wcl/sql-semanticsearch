@@ -66,8 +66,6 @@ public class ArxivApiClient(
 
             _logFetchingPaperInfo(_logger, new Uri(_httpClient.BaseAddress!, query).AbsoluteUri, null);
 
-            Console.WriteLine($"[Fetching] start={start}, max={maxResults}");
-
             var response = await _httpClient.GetAsync(query, cancellationToken);
             response.EnsureSuccessStatusCode();
 
@@ -85,6 +83,11 @@ public class ArxivApiClient(
             foreach (var entry in entries)
             {
                 var paper = entry.ToArxivPaper();
+                if(paper is null)
+                {
+                    continue;
+                }
+
                 yield return paper;
             }
 

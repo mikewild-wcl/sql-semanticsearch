@@ -4,17 +4,17 @@ public record SearchResultItem()
 {
     public required string ArxivId { get; init; }
 
-    public float Distance { get; set; }
+    public float Distance { get; init; }
 
-    public required string Title { get; set; }
+    public required string Title { get; init; }
 
-    public string? Summary { get; set; }
+    public string? Summary { get; init; }
 
-    public string? Comments { get; set; }
+    public string? Comments { get; init; }
 
-    public DocumentMetadata? Metadata { get; set; }
+    public DocumentMetadata? Metadata { get; init; }
 
-    public Uri? PdfUri { get; set; }
+    public Uri? PdfUri { get; init; }
 
-    public DateTime? Published { get; set; }
+    public DateTime? Published { get; init; }
 }

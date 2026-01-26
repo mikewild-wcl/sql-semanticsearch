@@ -57,7 +57,10 @@ var api = builder.AddProject<Projects.Api>(ResourceNames.Api)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitForCompletion(databaseDeployment);
 
-builder.AddScalarApiReference()
+builder.AddScalarApiReference(options => options
+    .PreferHttpsEndpoint() // Use HTTPS endpoints when available
+    .AllowSelfSignedCertificates() // Trust self-signed certificates
+)
     .WithApiReference(api);
 
 await builder.Build().RunAsync().ConfigureAwait(true);
