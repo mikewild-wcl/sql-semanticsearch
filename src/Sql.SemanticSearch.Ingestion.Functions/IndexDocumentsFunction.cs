@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Messages;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 
 namespace Sql.SemanticSearch.Ingestion.Functions;
 
@@ -35,6 +39,12 @@ public class IndexDocumentsFunction(
             "An error occurred while processing the indexing request.");
 
     [Function("IndexArxivDocuments")]
+    [OpenApiOperation(operationId: "Ingest")]
+    [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
+    [OpenApiRequestBody("application/json", typeof(IndexingRequest),
+            Description = "JSON request body containing { ids = [ \"<id>\"] }")]
+    [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string),
+            Description = "The OK response message containing a JSON result.")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "index-documents")]
         HttpRequest _,
@@ -54,7 +64,12 @@ public class IndexDocumentsFunction(
 
             await _ingestionService.ProcessIndexingRequest(indexingRequest, cancellationToken);
 
-            return new OkObjectResult($"Indexing request successfully processed {indexingRequest.Ids.Count} documents.");
+            return new OkObjectResult(
+                new 
+                { 
+                    status = $"{HttpStatusCode.OK}",
+                    result = $"Indexing request successfully processed {indexingRequest.Ids.Count} documents."
+                });
         }
         catch (Exception ex)
         {

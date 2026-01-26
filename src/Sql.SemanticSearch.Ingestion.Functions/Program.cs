@@ -26,7 +26,7 @@ if (string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreC
 builder.ConfigureFunctionsWebApplication();
 
 builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
-builder.Services.AddSingleton(new Func<IDbConnection>(() =>
+builder.Services.AddSingleton(new Func<IDbConnection>(() => 
     new SqlConnection(builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase))));
 
 builder.Services
