@@ -1,9 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using Sql.SemanticSearch.Core.Search;
 
 namespace Sql.SemanticSearch.Core.Messages;
 
-public record SearchResponse()
-{
-    [JsonPropertyName("details")]
-    public IReadOnlyCollection<string> Details { get; init; } = [];
-}
+public record SearchResponse(IReadOnlyCollection<SearchResultItem> Items);
+

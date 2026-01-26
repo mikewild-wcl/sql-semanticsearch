@@ -130,7 +130,7 @@ public class ArxivApiClient(
     {
         var paper = await GetPapers([arxivId], cancellationToken: cancellationToken).FirstOrDefaultAsync(cancellationToken);
 
-        if (paper.PdfUri is null)
+        if (paper?.PdfUri is null)
         {
             throw new ArxivPdfDownloadException("PDF URL is not available for this paper.");
         }

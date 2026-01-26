@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Sql.SemanticSearch.Core.Messages;
-using Sql.SemanticSearch.Core.Search;
 using Sql.SemanticSearch.Core.Search.Interfaces;
 using System.ComponentModel;
 
@@ -20,7 +19,7 @@ internal static class SearchEndpoints
                         CancellationToken cancellationToken) =>
                     {
                         var results = await searchService.Search(searchRequest, cancellationToken);
-                        return Results.Ok(new SearchResults([.. results]));
+                        return Results.Ok(new SearchResponse([.. results]));
                     })
                 .WithSummary("Post a search prompt.")
                 .WithDescription("This endpoint handles posted search requests and returns a response.")

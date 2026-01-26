@@ -42,7 +42,6 @@ public class SearchService(
 
         _logSearch(_logger, searchRequest.Query, searchRequest.Top, null);
 
-        await _databaseConnection.OpenConnection();
         try
         {
             var results = (await _databaseConnection.QueryAsync<SearchResultItem>(
@@ -55,17 +54,17 @@ public class SearchService(
                                [Title],
                                [Summary],
                                [Comments],
-                               CONVERT(NVARCHAR(MAX), [Metadata]) AS [Metadata],
+                               [Metadata],
                                [PdfUri],
                                [Published],
-                               vector_distance('cosine', ds.embedding, @vector) AS [Distance]
+                               VECTOR_DISTANCE('cosine', ds.embedding, @vector) AS [Distance]
                 FROM dbo.Documents d
                 INNER JOIN dbo.DocumentSummaryEmbeddings ds ON ds.id = d.id
                 ORDER BY Distance ASC;
                 """,
-                new 
-                { 
-                    Query = searchRequest.Query,
+                new
+                {
+                    searchRequest.Query,
                     @k = searchRequest.Top
                 })
                 ).ToList();
@@ -78,10 +77,6 @@ public class SearchService(
         {
             _logQueryError(_logger, ex);
             throw;
-        }
-        finally
-        {
-            await _databaseConnection.CloseConnection();
         }
     }
 }

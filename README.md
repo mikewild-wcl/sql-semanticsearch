@@ -66,11 +66,16 @@ A timeout can also be set in `host.json` for the function app, but this can't be
 Alternatively call from a command line using curl.
 ```
 curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950"] }'
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1110.2832","1609.09047","hep-th/0310077v2","1204.0162","0711.4114","hep-th/9908205","physics/0702069"] }'
 ```
 
-To call the API
+> [!Tip]
+> Console script for extracting arXiv links from a page - `console.log(Array.from($$("a")).filter(url => url.href.toLowerCase().includes("/arxiv.org/")).map(url => url.href).join(" "));` 
+> Console script for extracting arXiv ids from a page - `console.log(Array.from($$("a")).filter(url => url.href.toLowerCase().includes("/arxiv.org/")).map(url => url.href).map(href => { const match = href.match(/\/\/arxiv\.org\/pdf\/(.+?)\.pdf(?:$|[?#])/i); return match?.[1] ?? null; }).filter(Boolean).join(" "));` 
+
+To call the API use the script in `Sql.SemanticSearch.Api.http` or call from curl:
 ```
-curl -X POST https://sql-semanticsearch-api-sql_semanticsearch.dev.localhost:7253/api/search -H "Content-Type: application/json" -d '{"query": "Find papers on Gen AI"}'
+curl -X POST https://sql-semanticsearch-api-sql_semanticsearch.dev.localhost:7253/api/search -H "Content-Type: application/json" -d '{"query": "Find papers on Gen AI", "top_k": 5}'
 ```
 
 ## Aspire hosting and deployment

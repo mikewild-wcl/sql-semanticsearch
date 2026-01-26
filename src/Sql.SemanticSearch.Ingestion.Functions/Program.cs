@@ -1,4 +1,6 @@
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sql.SemanticSearch.Core.ArXiv;
@@ -8,6 +10,7 @@ using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.ServiceDefaults;
 using Sql.SemanticSearch.Shared;
+using System.Data;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -23,6 +26,8 @@ if (string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreC
 builder.ConfigureFunctionsWebApplication();
 
 builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
+builder.Services.AddSingleton(new Func<IDbConnection>(() =>
+    new SqlConnection(builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase))));
 
 builder.Services
     .AddSingleton(aiSettings)

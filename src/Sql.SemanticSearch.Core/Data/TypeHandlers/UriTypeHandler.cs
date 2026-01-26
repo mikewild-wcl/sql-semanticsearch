@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using System.Data;
 
-namespace Sql.SemanticSearch.Core.Data.TypeMappers;
+namespace Sql.SemanticSearch.Core.Data.TypeHandlers;
 
 internal class UriTypeHandler : SqlMapper.TypeHandler<Uri?>
 {

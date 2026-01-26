@@ -1,4 +1,4 @@
-using Sql.SemanticSearch.Core.Data.TypeMappers;
+using Sql.SemanticSearch.Core.Data.TypeHandlers;
 using System.Data;
 
 namespace Sql.SemanticSearch.Core.UnitTests.Data.TypeHandles;

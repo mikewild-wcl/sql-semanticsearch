@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Sql.SemanticSearch.Core.Serialization;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -7,11 +8,6 @@ namespace Sql.SemanticSearch.Core.ArXiv.Extensions;
 [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Extension members don't need to be static")]
 internal static partial class ArxivExtensions
 {
-    private static readonly JsonSerializerOptions CamelCaseSerialierOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     /* Validate arXiv IDs (both new and old style):
         ^
         (?:                              # Either:
@@ -54,7 +50,7 @@ internal static partial class ArxivExtensions
                 paper.Authors,
                 paper.Categories
             },
-            CamelCaseSerialierOptions);
+            SerializerOptions.CamelCaseSerialierOptions);
     }
 }
 

@@ -1,14 +1,36 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
+using Sql.SemanticSearch.Shared;
 using System.Data;
 
 namespace Sql.SemanticSearch.Core.Data;
 
 public class DapperConnection(
+    IConfiguration configuration,
+    Func<IDbConnection> connectionFactory,
     SqlConnection sqlConnection) : IDatabaseConnection
 {
     private readonly SqlConnection _sqlConnection = sqlConnection;
+    private readonly Func<IDbConnection> _connectionFactory = connectionFactory;
+
+    private readonly string _connectionString = configuration.GetConnectionString(ResourceNames.SqlDatabase)
+        ?? throw new InvalidOperationException($"Connection string {ResourceNames.SqlDatabase} not found");
+
+    public IDbConnection CreateConnection()
+    {
+        if (connectionFactory is not null)
+        {
+            var connection =  _connectionFactory() as SqlConnection;
+            if (connection is not null)
+            {
+                return connection;
+            }
+        }
+
+        return new SqlConnection(_connectionString);        
+    }
 
     public async Task CloseConnection()
     {
@@ -22,7 +44,9 @@ public class DapperConnection(
 
     public IDbTransaction BeginTransaction()
     {
-        return _sqlConnection.BeginTransaction();
+        using var connection = CreateConnection();
+        return connection.BeginTransaction();
+        //return _sqlConnection.BeginTransaction();
     }
 
     public async Task<int> ExecuteAsync(string sql, object? param = null, CommandType? commandType = null, IDbTransaction? transaction = null)
@@ -32,9 +56,8 @@ public class DapperConnection(
             return await transaction.Connection!.ExecuteAsync(sql, param, transaction, commandType: commandType);
         }
 
-        System.Diagnostics.Debug.WriteLine($"Connection: {_sqlConnection.ConnectionString}, state {_sqlConnection.State}");
-
-        return await _sqlConnection.ExecuteAsync(sql, param, commandType: commandType);
+        using var connection = CreateConnection();
+        return await connection.ExecuteAsync(sql, param, commandType: commandType);
     }
 
     public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object? param = null, CommandType? commandType = null, IDbTransaction? transaction = null)
@@ -44,7 +67,8 @@ public class DapperConnection(
             return await transaction.Connection.QueryAsync<T>(sql, param, transaction, commandType: commandType);
         }
 
-        return await _sqlConnection.QueryAsync<T>(sql, param, commandType: commandType);
+        using var connection = CreateConnection();
+        return await connection.QueryAsync<T>(sql, param, commandType: commandType);    
     }
 
     public async Task<T?> QueryFirstOrDefaultAsync<T>(string sql, object? param = null, CommandType? commandType = null, IDbTransaction? transaction = null)
@@ -54,6 +78,7 @@ public class DapperConnection(
             return await transaction.Connection.QueryFirstOrDefaultAsync<T?>(sql, param, transaction, commandType: commandType);
         }
 
+        using var connection = CreateConnection();
         return await _sqlConnection.QueryFirstOrDefaultAsync<T>(sql, param, commandType: commandType);
     }
 
@@ -64,6 +89,7 @@ public class DapperConnection(
             return await transaction.Connection.ExecuteScalarAsync<T>(sql, param, transaction, commandType: commandType);
         }
 
-        return await _sqlConnection.ExecuteScalarAsync<T>(sql, param, commandType: commandType);
+        using var connection = CreateConnection();
+        return await connection.ExecuteScalarAsync<T>(sql, param, commandType: commandType);
     }
 }

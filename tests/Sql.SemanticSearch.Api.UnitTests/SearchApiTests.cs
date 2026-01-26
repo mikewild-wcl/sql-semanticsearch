@@ -2,7 +2,6 @@ using Sql.SemanticSearch.Core.Messages;
 using System.Net;
 using System.Net.Http.Json;
 using Sql.SemanticSearch.Api.UnitTests.Fixtures;
-using Sql.SemanticSearch.Core.Search;
 
 namespace Sql.SemanticSearch.Api.UnitTests;
 
@@ -33,7 +32,7 @@ public class SearchApiTests(SearchApiFixture fixture) : IClassFixture<SearchApiF
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var results = await response.Content.ReadFromJsonAsync<SearchResults>(
+        var results = await response.Content.ReadFromJsonAsync<SearchResponse>(
             cancellationToken: TestContext.Current.CancellationToken);
 
         results.ShouldNotBeNull();

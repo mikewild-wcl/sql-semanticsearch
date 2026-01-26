@@ -4,6 +4,8 @@ namespace Sql.SemanticSearch.Core.Data.Interfaces;
 
 public interface IDatabaseConnection
 {
+    public IDbConnection CreateConnection();
+
     Task CloseConnection();
 
     Task OpenConnection();

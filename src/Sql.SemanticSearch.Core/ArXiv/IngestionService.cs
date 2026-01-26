@@ -61,9 +61,9 @@ public class IngestionService(
     
     private async Task Save(ArxivPaper paper)
     {
-        await _databaseConnection.OpenConnection();
-        try
-        {
+        //await _databaseConnection.OpenConnection();
+        //try
+        //{
             using var transaction = _databaseConnection.BeginTransaction();
 
             await DeleteExistingDocumentIfExists(paper.Id, transaction);
@@ -73,11 +73,11 @@ public class IngestionService(
             await SaveDocumentMetadataEmbeddings(documentId, transaction);
             
             transaction.Commit();
-        }
-        finally
-        {
-            await _databaseConnection.CloseConnection();
-        }
+        //}
+        //finally
+        //{
+        //    await _databaseConnection.CloseConnection();
+        //}
     }
 
     private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>

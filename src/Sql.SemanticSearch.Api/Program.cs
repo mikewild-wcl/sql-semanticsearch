@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Sql.SemanticSearch.Api.Endpoints;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data;
@@ -6,6 +7,7 @@ using Sql.SemanticSearch.Core.Search;
 using Sql.SemanticSearch.Core.Search.Interfaces;
 using Sql.SemanticSearch.ServiceDefaults;
 using Sql.SemanticSearch.Shared;
+using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,8 @@ if (string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreC
 builder.Services.AddOpenApi();
 
 builder.AddSqlServerClient(connectionName: ResourceNames.SqlDatabase);
+builder.Services.AddSingleton(new Func<IDbConnection>(() =>
+    new SqlConnection(builder.Configuration.GetConnectionString(ResourceNames.SqlDatabase))));
 TypeHandlerRegistry.RegisterHandlers(); // Dapper handlers for mapping data back from database
 
 builder.Services
