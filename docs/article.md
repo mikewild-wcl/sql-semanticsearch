@@ -1,11 +1,10 @@
 # Document indexing and semantic search with an Azure Function App and SQL Server 2025
 
-In November 2025 Microsoft release SQL Server 2025, which, like everything else from Microsoft reently, is heavily AI-focussed. It introduces a native vector data type and the ability to call external large language models. This opens up new ways of searcing information in SQL Server, as well as in Azure Sql which already had the new types.
+In November 2025 Microsoft release SQL Server 2025, which, like everything else from Microsoft recently, is heavily AI-focussed. It introduces a native vector data type and the ability to call external large language models. This opens up new ways of searching information in SQL Server, as well as in Azure SQL which already had the new types.
 
-Vector search is important for building intelligent applications, allowing semantic search, RAG pipelines, product
-matching, data classification, and more. 
+Vector search is important for building intelligent applications, allowing semantic search, RAG pipelines, product matching, data classification, and more. 
 
-Specialized vector databases are available, but for SQL Server users that meant a more complicated architectire,  generating vector embeddings in code and saving them into inefficient structures. Now everything is much simpler.
+Specialized vector databases are available, but for SQL Server users that meant a more complicated architecture,  generating vector embeddings in code and saving them into inefficient structures. Now everything is much simpler.
 
 **Azure Functions** are a simple, cloud-native way to add semantic intelligence to any application.
 
@@ -15,9 +14,11 @@ This article looks at how to use Azure functions to
  - generate vector embeddings for the summary
  - allow search
 
-We'll use Aspire for hosting and running locally - what I think of as "localfirst - cloud native". It lets us run a database, functions, and an embedding model locally without needing to set up resources on Azure or running scripts. The embedding model will be run in Ollama, again because it can run locally. I'm not going into detail on how that works; that can come another day.
+We'll use Aspire for hosting and running locally - what I think of as "local first - cloud native". It lets us run a database, functions, and an embedding model locally without needing to set up resources on Azure or running scripts. The embedding model will be run in Ollama, again because it can run locally. I'm not going into detail on how that works; that can come another day.
 
- This is intended as an initial proof of concept, so it isn't a full RAG solution. We just want to show how to add embeddings for semantic search; a future iteration could download files, chunk them into the database, and add a chat capability.
+This is intended as an initial proof of concept, so it isn't a full RAG solution. We just want to show how to add embeddings for semantic search; a future iteration could download files, chunk them into the database, and add a chat capability.
+
+
 
 ![Architecture overview diagram, showing the main components described above.](./images/architecture_overview.png)
 
@@ -108,39 +109,114 @@ FROM sys.external_models
 ![External models in SSMS.](./images/external_models.png)
 
 ## Azure Function: Insert Pipeline 
+
+I decided to use a function for ingestion. It has s simple HTTP trigger that takes a list of document ids; in a production-level application this could be part of a pipeline that looks for new documents and queues them for processing.
+
+For data I'm using arXiv, because this has an open and easy-to-use API that returns a few interesting properties.
+
   - http-triggered function that takes a list of arXiv document ids and queries the details
   - insert and create embedding
-  - simple approach; in production it might be better to send a message to another function via a queue or ServiceBus and do the embedding there
-    - also mention article on SQL trigger that will do the embedding for us
-  - search query - takes a string and returns search reasults. Can test using curl or Postman for simplicity, so no need for an extra web or console app.
+  - simple approach; in production it might be better to send a message to another function via a queue or Service Bus and do the embedding there
 
+  - also mention article on SQL trigger that will do the embedding for us
+
+  *arxiv API client*
 ``` csharp
+
 ```
 
-## 7. Azure Function: Query Pipeline
-
-Generate an embedding for the user query, then let SQL Server do vector
-search:
+Once we have the paper it gets saved by a series of calls to the database, all wrapped in a transaction.
 
 ``` csharp
-var cmd = new SqlCommand(@"
-    SELECT TOP 10 Id, Title, Content,
-    VECTOR_DISTANCE(Embedding, @Query, COSINE) AS Score
-    FROM Documents
-    ORDER BY Score", conn);
+using var connection = _databaseConnection.CreateConnection();
+connection.Open();
+using var transaction = connection.BeginTransaction();
 
-cmd.Parameters.AddWithValue("@Query", queryEmbedding);
+await DeleteExistingDocumentIfExists(paper.Id, transaction);
+
+var documentId = await SaveDocument(paper, transaction);
+await SaveDocumentSummaryEmbeddings(documentId, transaction);
+await SaveDocumentMetadataEmbeddings(documentId, transaction);
+
+transaction.Commit();
+```
+
+
+``` csharp
+
+
+    private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>
+        await _databaseConnection.ExecuteAsync(
+            """
+            DELETE FROM DocumentSummaryEmbeddings
+            WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
+            
+            DELETE FROM DocumentMetadataEmbeddings
+            WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
+
+            DELETE FROM dbo.Documents
+            WHERE [ArxivId] = @ArxivId;            
+            """,
+            new { ArxivId = arxivId },
+            transaction: transaction);
+
+    private async Task<int> SaveDocument(ArxivPaper paper, System.Data.IDbTransaction transaction) =>
+        await _databaseConnection.ExecuteScalarAsync<int>(
+            """
+            INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])                            
+            VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
+
+            SELECT CAST(SCOPE_IDENTITY() as int);
+            """,
+            new
+            {
+                ArxivId = paper.Id,
+                paper.Title,
+                paper.Summary,
+                paper.Comments,
+                Metadata = paper.MetadataString,
+                PdfUri = paper.PdfUri?.ToString(),
+                paper.Published
+            },
+            transaction: transaction);
+
+    /* Note: Embedding model is *NOT* a SQL injection risk, it must be hard-coded so we have to use the settings value. */
+    private async Task SaveDocumentSummaryEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
+        await _databaseConnection.ExecuteAsync(
+            $"""
+            INSERT INTO dbo.DocumentSummaryEmbeddings ([Id], [Embedding])
+            SELECT @Id,
+                   AI_GENERATE_EMBEDDINGS(d.[Summary] USE MODEL {_aiSettings.ExternalEmbeddingModel})
+            FROM dbo.Documents d
+            WHERE d.[Id] = @Id
+                AND d.[Summary] IS NOT NULL;
+            """,
+            new { Id = documentId },
+            transaction: transaction);
+
+    private async Task SaveDocumentMetadataEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
+            await _databaseConnection.ExecuteAsync(
+                $"""
+                INSERT INTO dbo.DocumentMetadataEmbeddings ([Id], [Embedding])
+                SELECT @Id,
+                        AI_GENERATE_EMBEDDINGS(CAST(d.[Metadata] AS NVARCHAR(MAX)) USE MODEL {_aiSettings.ExternalEmbeddingModel})
+                FROM dbo.Documents d
+                WHERE d.[Id] = @Id
+                    AND d.[Metadata] IS NOT NULL;
+                """,
+            new { Id = documentId },
+            transaction: transaction);
 ```
 
  ## Vector index
-
-I haven't done this because as soon as a vecttor index is created, the table becomes read-only.
   
-? -   Built-in approximate nearest neighbor (ANN) vector indexes\
+? -   Built-in approximate nearest neighbour (ANN) vector indexes\
 -   Fast similarity functions (cosine, dot-product, Euclidean)\
 -   Hardware acceleration for vector math
 
-In a production scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated. That's too much for a proof-of-concept like this! Microsoft says the read-only limitation will be removed soon so heopefully a proper index will be acheivable then.
+There is no index on the vectors. There is a vector index available, but adding it makes the table read-only so I haven't included it.
+
+In a production scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated. That's too much for a proof-of-concept like this! Microsoft says the read-only limitation will be removed soon so I hope to be able to revisit this soon.
 
 
 
@@ -150,6 +226,8 @@ I've included a script that drops all the tables in the repo - sql/clean_documen
 
 ## Getting data from arXiv
 
+  - search query - takes a string and returns search results. Can test using curl or Postman for simplicity, so no need for an extra web or console app.
+
 The function calls a service which calls a client class that gets papers from arXiv. It has methods to:
  - Get paper information from arXiv API by paper ID
  - Download the PDF file and returns it as a MemoryStream   
@@ -158,7 +236,7 @@ The function calls a service which calls a client class that gets papers from ar
  We'll only use the first one for now. The others will come in handy when it's time to pull down the files and save into our database.
 
  
-The API calls here mean we aren't completely local-first, but that's fine for this intial version. In future a workaround can be created, e.g. a fake api that provides test data.
+The API calls here mean we aren't completely local-first, but that's fine for this initial version. In future a workaround can be created, e.g. a fake api that provides test data.
 
 ## Testing
 
@@ -192,12 +270,74 @@ Breakdown:
 $
 ```
 
+## 7. Querying - Search API
+
+I decided to use an ASP.NET Core API project with a minimal API for the search. The API will be available for users who want a quick response, and Azure functions can be slow to start (depending on the plan). An API is the way to go. 
+
+Generate an embedding for the user query, then let SQL Server do vector search:
+
+The search uses a new function AI_GENERATE_EMBEDDING to create an embedding on the search query, then compares that against the embeddings we added to the Summary column. The function it users is VECTOR_DISTANCE and I've told it to calculate the cosine distance. 
+
+> It's a vector search, it takes the text and calculates a vector using an AI embedding model that will create similar vectors for similar meanings. Then the search calculates how close those vectors are to the words in my query.
+
+```csharp
+var results = (await _databaseConnection.QueryAsync<SearchResultItem>(
+    $"""
+    DECLARE @vector VECTOR({_aiSettings.EmbeddingModelDimensions});
+    
+    SELECT @vector = AI_GENERATE_EMBEDDINGS(@query USE MODEL {_aiSettings.ExternalEmbeddingModel});
+    
+    SELECT TOP(@k) [ArxivId],
+                   [Title],
+                   [Summary],
+                   [Comments],
+                   [Metadata],
+                   [PdfUri],
+                   [Published],
+                   VECTOR_DISTANCE('cosine', ds.embedding, @vector) AS [Distance]
+    FROM dbo.Documents d
+    INNER JOIN dbo.DocumentSummaryEmbeddings ds ON ds.id = d.id
+    ORDER BY Distance ASC;
+    """,
+    new
+    {
+        searchRequest.Query,
+        @k = searchRequest.Top
+    })
+    ).ToList();
+```
+
+There's a lot happening here, and in a production scenario it would probably be wrapped into a stored procedure.
+
+Parameters are the query text and a "top k" value to limit the search. It returns a list of results with the distance - the smaller the distance the more relevant the result.
+
+There were some interesting results. One was a paper with a title of "Can apparent superluminal neutrino speeds be explained as a quantum weak measurement?" and a summary "Probably not.". That isn't going to work well with this search. Maybe we need a Title vector index or a combined vector index that includes the title with the summary.
+
+I did some tests with the metadata index, such as a LEAST query that took the closest results from either the summary or the metadata. However, this didn't return very meaningful results and it might be better to have a specialized search query when looking for authors or categories, or maybe those both need their own indexes.
+
+
 ## Future improvements
 
-- add an MCP server as a function and show how it can be used from a client like GitHub Copilot
+There's a lot that can be built on here. The vector indexing and searching is limited to the document summary; for a real RAG system the PDF documents need to be downloaded, split into chunks, and turned into embedding vectors. I'm going to look that in the near future.
+
+- add an MCP server as a function and show how it can be used from a client like GitHub Copilot- 
 - add a notebook showing the difference between PdfPig in C# and Docling in Python for extracting chunking PDF files
 - implement the chunking in another function
 - deploy to Azure
+- database resilience. At the moment everything runs locally, but if the database is moved to Azure then we'll need some recilience. I've had trouble in the past when using serverless databases that need time to warm up, not to mention network errors. '
+
+
+## Conclusions
+
+The new AI capabilities in SQL Server have expanded the options for building semantic search applications. It lets the database do all the work for us, simplifying the code needed to create embeddings. 
+
+We used a function app to do the heavy lifting, but if I was moving this towards production a lot of the code could be moved into SQL Server stored procedures. 
+
+The search is fairly simple for now, because we only pulled in the summary. 
+
+If you're already using SQL Server, there is no need to bring in yet another database. SQL Server 2025 simplifies the application and gives us a scalable, cloud-friendly native SQL application.
+
+We haven't talked about Aspire much in this article, but it was instrumental in getting the application to work. I'll give more detail on that next time.
 
 ---
 ### Source code
