@@ -48,8 +48,7 @@ public class ArxivApiClient(
             .ToList();
 
         var idList = string.Join(',', validIds
-            .Select(id => id.Split('v')[0]
-                            //?.FirstOrDefault())
+            .Select(id => id!.Split('v')[0]
             ));
 
         if (string.IsNullOrWhiteSpace(idList))

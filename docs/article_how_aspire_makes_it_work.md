@@ -2,6 +2,11 @@
 
 In my last article I showed a project that used an Azure function, an ASP.NET Web API, an LLM embedding model hosted by Ollama, and a dev tunnel that exposed Ollama over https. There's a lot of plumbing there, but it was pretty easy to put together using Aspire.
 
+???
+The API calls here mean we aren't completely local-first, but that's fine for this initial version. In future a workaround can be created, e.g. a fake api that provides test data.
+I've included a script that drops all the tables in the repo - sql/clean_documents_database.sql.
+???
+
 ## Creating the basic application
 
 Create an empty Aspire application. I used my own template to set this up with some default files.

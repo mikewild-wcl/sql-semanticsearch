@@ -10,8 +10,11 @@ IF (@aiProvider = 'OLLAMA')
 BEGIN
     PRINT 'Using OLLAMA as AI provider'
 
-    --Drop existing external model if location has changed
-    IF EXISTS (SELECT * FROM sys.external_models WHERE [Name] = '$EXTERNAL_EMBEDDING_MODEL$' AND [Location] <> '$AI_CLIENT_ENDPOINT$')
+    --Drop existing external model if anything has changed
+    IF EXISTS (SELECT * FROM sys.external_models 
+               WHERE [Name] = '$EXTERNAL_EMBEDDING_MODEL$' 
+                 AND ([Location] <> '$AI_CLIENT_ENDPOINT$'
+                  OR  [Model] <> '$EMBEDDING_MODEL$'))
     BEGIN
         EXEC('DROP EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$')
     END

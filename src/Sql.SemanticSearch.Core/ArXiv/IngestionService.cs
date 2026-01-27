@@ -128,7 +128,7 @@ public class IngestionService(
                 $"""
                 INSERT INTO dbo.DocumentMetadataEmbeddings ([Id], [Embedding])
                 SELECT @Id,
-                        AI_GENERATE_EMBEDDINGS(CAST(d.[Metadata] AS NVARCHAR(MAX)) USE MODEL {_aiSettings.ExternalEmbeddingModel})
+                       AI_GENERATE_EMBEDDINGS(CAST(d.[Metadata] AS NVARCHAR(MAX)) USE MODEL {_aiSettings.ExternalEmbeddingModel})
                 FROM dbo.Documents d
                 WHERE d.[Id] = @Id
                     AND d.[Metadata] IS NOT NULL;

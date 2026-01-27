@@ -1,94 +1,110 @@
-# Document indexing and semantic search with an Azure Function App and SQL Server 2025
+# Document indexing and semantic search with SQL Server 2025 and Azure Functions
 
-In November 2025 Microsoft release SQL Server 2025, which, like everything else from Microsoft recently, is heavily AI-focussed. It introduces a native vector data type and the ability to call external large language models. This opens up new ways of searching information in SQL Server, as well as in Azure SQL which already had the new types.
+In November 2025 Microsoft released SQL Server 2025 which has a major focus on AI features and introduces a native vector data type and the ability to call external large language models to create vector embeddings. This opens up new ways of working with SQL Server for AI applications. Azure SQL already supported vectors, but SQL Server 2025 brings these capabilities fully on-premises for the first time.
 
-Vector search is important for building intelligent applications, allowing semantic search, RAG pipelines, product matching, data classification, and more. 
+Vector embeddings are numerical representations of text or images that capture their meaning. Vector search calculates vectors using an AI embedding model, and by comparing vectors we can find content that is semantically similar to a query. In modern GenAI applications, embeddings are used for semantic search, RAG pipelines, product matching, data classification, and more. 
 
-Specialized vector databases are available, but for SQL Server users that meant a more complicated architecture,  generating vector embeddings in code and saving them into inefficient structures. Now everything is much simpler.
+Specialized vector databases are available, but if you're already using SQL Server the new capabilities let you generate vector embeddings directly in the database instead of needing to write code and deal with talking to Gen AI models, and without needing to write complicated code to compare embeddings. 
 
-**Azure Functions** are a simple, cloud-native way to add semantic intelligence to any application.
+This article walks through a proof-of-concept showing how to ingest documents and generate embeddings using only SQL Server 2025 and a Function App, and then adds a simple API that performs semantic search. It's a .NET C# application that uses an Aspire AppHost to set up the database and embedding model locally as well as starting the function and API, all without needing any cloud resources or setup scripts. I'm not going into detail on how that works this time; maybe in another post.
 
-???????????????????
-This article looks at how to use Azure functions to 
- - process document from arXiv into a SQL Server database 
- - generate vector embeddings for the summary
- - allow search
+## Architecture Overview
 
-We'll use Aspire for hosting and running locally - what I think of as "local first - cloud native". It lets us run a database, functions, and an embedding model locally without needing to set up resources on Azure or running scripts. The embedding model will be run in Ollama, again because it can run locally. I'm not going into detail on how that works; that can come another day.
+At a high level, the system consists of:
 
-This is intended as an initial proof of concept, so it isn't a full RAG solution. We just want to show how to add embeddings for semantic search; a future iteration could download files, chunk them into the database, and add a chat capability.
+- An Azure Function App for ingestion
+- SQL Server 2025 for storage and vector search
+- Database deployment using DbUp 
+- Ollama for embedding generation
+- arXiv API as the document source
+- An ASP.NET minimal API for search queries
 
+**Azure Functions** are serverless applications that lets us run code on-demand. They are a good match for document ingestion because they run only when needed. In this case the function will be triggered by a user request, but in a production application there could be a process that looks for new articles and sends a Service Bus message to another function that does the embedding work. SQL triggers are another possible approach (link in the References section).
 
+**Ollama** is an open-source tool for running large language models (LLMs) locally. It avoids the need to use paid models like OpenAI or Gemini, although those can be used instead.
+
+**arXiv** is a free, open-access repository of scientific papers. It has an easy-to-use API and is a good source of interesting documents.
+
+The application flow is:
+
+1.  A client sends a list of arXiv IDs to an Azure Function
+2.  The Function fetches metadata from the arXiv API
+3.  Documents are saved into SQL Server
+4.  SQL Server generates vector embeddings via `AI_GENERATE_EMBEDDINGS`
+5.  A search API generates a query embedding and uses `VECTOR_DISTANCE` to rank results
 
 ![Architecture overview diagram, showing the main components described above.](./images/architecture_overview.png)
 
+All the code is available in my GitHub - link at the end.
+
 ## Embedding model
 
-For this project I've chosen `nomic-embed-text` as the embedding model. If you want to dig into the details see [Nomic](https://www.nomic.ai/news/nomic-embed-text-v1), or go to [Hugging Face](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5).
-It's a large context length text encoder that performs better than OpenAI `text-embedding-ada-002` and `text-embedding-3-small`, but if I migrate to OpenAI in a production environment I'd probably go for `text-embedding-3-small`. The model isn't important but what IS important is using the same model for all embedding tasks,
+For this project I've chosen `nomic-embed-text` as the embedding model. If you want to dig into the details see [Nomic](https://www.nomic.ai/news/nomic-embed-text-v1), or go to [Hugging Face](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5). It's a large-context-length text encoder that performs well compared to OpenAI’s `text-embedding-ada-002` and `text-embedding-3-small`, but if I was using OpenAI in a production environment I'd probably go for `text-embedding-3-large`. 
 
-The model has 768 dimensions by default and we'll need to remember that when creating our SQL tables.
-
-e don't need a chat model at this stage since we are only searching, but it might be added later.
-
+It's important to use the same model for all embedding tasks; this model creates vectors with 768 dimensions by default and we'll need to set up our SQL tables to match. 
 
 ## SQL Server 2025 Schema and Embedding model setup
 
-The SQL Server tables are fairly simple.
+Even with the latest version of SQL Server, some vector features are still in preview, so the first thing to do is to turn on preview features:
 
-First make sure server allows external REST endpoints: 
+```sql
+ALTER DATABASE SCOPED CONFIGURATION
+SET PREVIEW_FEATURES = ON;
+```
+
+Then make sure server allows external REST endpoints, which is required for calling the embedding model: 
 
 ``` sql
 EXEC sp_configure 'external rest endpoint enabled', 1;
 RECONFIGURE WITH OVERRIDE;
 ```
 
-We have a table for documents which includes summary text and metadata as a JSON column containing authors and tags, plus an index for it.
-**Link to Davide M article**
+We have a table for documents which includes summary text and metadata as a JSON column containing authors and tags, plus an index for it. JSON columns are another new SQL 2025 feature that makes working with document data much easier.
 
 ``` sql
 CREATE TABLE dbo.Documents
 (
-    [Id] INT IDENTITY CONSTRAINT PK_Documents primary key,
+    [Id] INT IDENTITY CONSTRAINT [PK_Documents] PRIMARY KEY,
     [ArxivId] NVARCHAR(50) NULL,
-    [Title] nvarchar(300) NOT NULL,
-    [Summary] nvarchar(max) NULL,
-    [Comments] nvarchar(max) NULL,
+    [Title] NVARCHAR(300) NOT NULL,
+    [Summary] NVARCHAR(MAX) NULL,
+    [CommentS] NVARCHAR(MAX) NULL,
     [Metadata] JSON NULL,
     [PdfUri] NVARCHAR(1000) NOT NULL,
     [Published] DATETIME2(0) NOT NULL,
     [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_Documents_Created DEFAULT (SYSUTCDATETIME()),
     [Updated] DATETIME2(7) NULL,
-    [LastUpdatedOn] datetime2(0) NULL
-)
+    [LastUpdatedOn] DATETIME2(7) NULL)
 GO
 CREATE JSON INDEX IX_Documents_Metadata ON dbo.Documents(Metadata) FOR ('$');
 GO
 ```
 
-Summary and Metadata are going to be turned into vector embeddings so we have a table for each of those - Microsoft recommends doing it this way. Note the `$EMBEDDING_DIMENSIONS$` which has the number of dimensions (768).
+Summary and Metadata are going to be turned into vector embeddings. Microsoft recommends using a separate table for each embedding (link in the references section) so there are two tables. We need to use EXEC because `$EMBEDDING_DIMENSIONS$` is a parameter passed in by the setup code which has the number of dimensions (768).
 
 ``` sql
 EXEC('CREATE TABLE dbo.DocumentSummaryEmbeddings (
-    [Id] INT NOT NULL,
-    [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
-    [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentSummaryEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
-    CONSTRAINT FK_DocumentSummaryEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
-```
+          [Id] INT NOT NULL,
+          [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+          [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentSummaryEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
+          CONSTRAINT FK_DocumentSummaryEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
 
-``` sql
 EXEC('CREATE TABLE dbo.DocumentMetadataEmbeddings (
-    [Id] INT NOT NULL,
-    [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
-    [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentMetadataEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
-    CONSTRAINT FK_DocumentMetadataEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
+        [Id] INT NOT NULL,
+        [Embedding] VECTOR($EMBEDDING_DIMENSIONS$) NOT NULL,
+        [Created] DATETIME2(7) NOT NULL CONSTRAINT DF_DocumentMetadataEmbeddings_Created DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT FK_DocumentMetadataEmbeddings_Documents FOREIGN KEY (Id) REFERENCES Documents(Id))')
 ```
 
-Finally we need to set up the Ollama embedding model. If we were using OpenAI then there some security settings need to configured, but those aren't needed for Ollama.
+Finally we need to set up the Ollama embedding model. If we were using OpenAI then there would be some security configuration needed, but we can ignore that for this proof-of-concept.
 
-One problem with using Ollama is that it only exposes an http endpoint. If you look at other articles r books they'll tell you to set up an https proxy of one sort or another, but because we're using Aspire a dev tunnel can do the job. The uri for that needs to be passed into the setup script below. I drop and recreate it each time because I've been bitten by Aspire changing the dev tunnel uri and port.
+Ollama only exposes an http endpoint and if you look at other articles or books they'll tell you to set up an https proxy first. Aspire gives us an easy way using a dev tunnel; the https uri for that is passed in as a parameter and the model is created by the script below. I drop and recreate it if the model name or dev tunnel uri has changed. The name of the embedding model and to 
+
 ``` sql
-IF EXISTS (SELECT * FROM sys.external_models WHERE name = '$EXTERNAL_EMBEDDING_MODEL$')
+IF EXISTS (SELECT * FROM sys.external_models 
+           WHERE [Name] = '$EXTERNAL_EMBEDDING_MODEL$' 
+             AND ([Location] <> '$AI_CLIENT_ENDPOINT$'
+              OR  [Model] <> '$EMBEDDING_MODEL$'))
 BEGIN
     EXEC('DROP EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$')
 END
@@ -101,7 +117,7 @@ EXEC('CREATE EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$
         MODEL = ''$EMBEDDING_MODEL$'')')
 ```
 
-You can check that the model was deployed by running this in SSMS:
+You can check that the model was deployed by running this in your SQL tool of choice:
 ```
 SELECT [external_model_id], [name], [api_format], model_type_desc, [model], [location]
 FROM sys.external_models
@@ -110,22 +126,65 @@ FROM sys.external_models
 
 ## Azure Function: Insert Pipeline 
 
-I decided to use a function for ingestion. It has s simple HTTP trigger that takes a list of document ids; in a production-level application this could be part of a pipeline that looks for new documents and queues them for processing.
+The Azure function has a simple HTTP trigger that takes a list of arXiv document ids. There is some minimal checking in the application so only valid ids are used; invalid ids are thrown away but in a production scenario there would need to be better logging and reporting. The ids are passed through to a service that calls arXiv APIS - here are some highlights from the ingestion code:
 
-For data I'm using arXiv, because this has an open and easy-to-use API that returns a few interesting properties.
-
-  - http-triggered function that takes a list of arXiv document ids and queries the details
-  - insert and create embedding
-  - simple approach; in production it might be better to send a message to another function via a queue or Service Bus and do the embedding there
-
-  - also mention article on SQL trigger that will do the embedding for us
-
-  *arxiv API client*
 ``` csharp
+builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>
+{
+    client.BaseAddress = new("http://export.arxiv.org/api/");
+});
 
+...
+string query = $"query?id_list={idList}&start={start}&max_results={maxResults}";
+var response = await _httpClient.GetAsync(query, cancellationToken);
+
+string xmlContent = await response.Content.ReadAsStringAsync(cancellationToken);
+var doc = XDocument.Parse(xmlContent);
+var entries = doc.Descendants(ArxivNamespace.Atom + "entry").ToList();
+
+...
+
+    extension(XElement? entry)
+    {
+        public ArxivPaper? ToArxivPaper()
+        {
+            if (entry is null) return null;
+
+            var entryId = entry.Element(ArxivNamespace.Atom + "id")?.Value;
+
+            if (string.IsNullOrEmpty(entryId)) return null;
+
+            var id = entryId.ToShortId();
+
+            var pdfLink = entry.Descendants(ArxivNamespace.Atom + "link")
+                .FirstOrDefault(l => l.Attribute("title")?.Value == "pdf");
+
+            var pdfUrl = pdfLink?.Attribute("href")?.Value;
+            var published = DateTime.TryParse(entry.Element(ArxivNamespace.Atom + "published")?.Value, out var publishedDate) ? publishedDate : DateTime.MinValue;
+
+            return new ArxivPaper(id, entry.Element(ArxivNamespace.Atom + "title")?.Value?.Trim())
+            {
+                PdfUri = pdfUrl is not null ? new Uri(pdfUrl) : null,
+                Summary = entry.Element(ArxivNamespace.Atom + "summary")?.Value?.Trim() ?? string.Empty,
+                Comments = entry.Element(ArxivNamespace.Atom + "comment")?.Value?.Trim(),
+                Published = published,
+                Authors = entry.Descendants(ArxivNamespace.Atom + "author")
+                    .Select(a => a.Element(ArxivNamespace.Atom + "name")?.Value)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Select(name => name!)
+                    .ToList()
+                    ?? [],
+                Categories = entry.Descendants(ArxivNamespace.Atom + "category")
+                    .Select(c => c.Attribute("term")?.Value)
+                        .Where(term => !string.IsNullOrEmpty(term))
+                        .Select(term => term!)
+                        .ToList()
+                        ?? []
+            };
+        }
 ```
 
-Once we have the paper it gets saved by a series of calls to the database, all wrapped in a transaction.
+Once we have the paper it gets saved by a series of calls to the database, all wrapped in a transaction. I'm using Dapper and all the SQL is embedded in my C# code. You might think stored procedures would be better, and you might be right, but for early development I find this way much easier.
 
 ``` csharp
 using var connection = _databaseConnection.CreateConnection();
@@ -141,10 +200,7 @@ await SaveDocumentMetadataEmbeddings(documentId, transaction);
 transaction.Commit();
 ```
 
-
 ``` csharp
-
-
     private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>
         await _databaseConnection.ExecuteAsync(
             """
@@ -208,77 +264,42 @@ transaction.Commit();
             transaction: transaction);
 ```
 
- ## Vector index
-  
-? -   Built-in approximate nearest neighbour (ANN) vector indexes\
--   Fast similarity functions (cosine, dot-product, Euclidean)\
--   Hardware acceleration for vector math
+The most interesting thing here is AI_GENERATE_EMBEDDINGS which tells SQL Server to make a call to the external server to generate the embedding. 
 
-There is no index on the vectors. There is a vector index available, but adding it makes the table read-only so I haven't included it.
+### Testing the ingestion
 
-In a production scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated. That's too much for a proof-of-concept like this! Microsoft says the read-only limitation will be removed soon so I hope to be able to revisit this soon.
+To test the function we just need to issue a POST request using the Functions.http script in the functions project: 
 
+```
+@Functions_HostAddress = http://localhost:7131
 
+POST {{Functions_HostAddress}}/api/index-documents/
+Content-Type: application/json
+Accept: application/json
 
+{
+  "ids": [
+    "1207.0580",
+...
+    "physics/0702069"
+  ]
+}
+```
 
-I've included a script that drops all the tables in the repo - sql/clean_documents_database.sql.
-
-
-## Getting data from arXiv
-
-  - search query - takes a string and returns search results. Can test using curl or Postman for simplicity, so no need for an extra web or console app.
-
-The function calls a service which calls a client class that gets papers from arXiv. It has methods to:
- - Get paper information from arXiv API by paper ID
- - Download the PDF file and returns it as a MemoryStream   
- - Complete workflow: Get paper info and download PDF to memory stream 
- 
- We'll only use the first one for now. The others will come in handy when it's time to pull down the files and save into our database.
-
- 
-The API calls here mean we aren't completely local-first, but that's fine for this initial version. In future a workaround can be created, e.g. a fake api that provides test data.
-
-## Testing
-
-Test the function using a POST request - use the test http script in the functions project, add a Postman request or simply use curl:
+or use Postman or a curl command:
 ```
 curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950" ] }'
 ```
 
-When adding a lot of ids it can run for a while, so I don't recommend sending large requests.
+This can run for a while, so I don't recommend sending large requests. I had to increase the REST API timeout in Visual Studio (go to Tools..Options, search for `REST advanced`) so I could send a reasonably large request.
 
-I increased the REST API timeout in Visual Studio (go to Tools..Options, search for `REST advanced`) so I could send a reasonably large request from unless you increase the timeout. See the README for details.
-
-![Where to set REST request timeout.](./images/vs_rest_timeout.png)
-
-Valid arxiv ids look like `1409.0473` or `hep-th/9901001` (pre-2007). For more see [Understanding the arXiv identifier](https://info.arxiv.org/help/arxiv_identifier.html).
-There is minimal validation and de-duplication of the ids in the code. I added a regex:
-``` csharp
-var arxivRegex = new Regex(
-    @"^(?:\d{4}\.\d{4,5}|[a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?$",
-    RegexOptions.IgnoreCase);
-```
-Breakdown:
-```
-^
-(?:                              # Either:
-  \d{4}\.\d{4,5}                  #   New-style: YYMM.NNNN or YYMM.NNNNN
-  |                               #   OR
-  [a-z\-]+(?:\.[A-Z]{2})?/\d{7}   #   Old-style: archive(.SUB)/YYMMNNN
-)
-(?:v\d+)?                         # Optional version suffix
-$
-```
-
-## 7. Querying - Search API
+## Querying - Search API
 
 I decided to use an ASP.NET Core API project with a minimal API for the search. The API will be available for users who want a quick response, and Azure functions can be slow to start (depending on the plan). An API is the way to go. 
 
 Generate an embedding for the user query, then let SQL Server do vector search:
 
-The search uses a new function AI_GENERATE_EMBEDDING to create an embedding on the search query, then compares that against the embeddings we added to the Summary column. The function it users is VECTOR_DISTANCE and I've told it to calculate the cosine distance. 
-
-> It's a vector search, it takes the text and calculates a vector using an AI embedding model that will create similar vectors for similar meanings. Then the search calculates how close those vectors are to the words in my query.
+The search uses AI_GENERATE_EMBEDDING to create an embedding on the search query, then compares that against the embeddings we added to the embedding table during ingestion. The function used is VECTOR_DISTANCE and I'm calculating the cosine distance here. I won't go into the maths (or the math!) but that's one of the most common ways of comparing vectors. SQL Server also supports dot-product and Euclidean distance.
 
 ```csharp
 var results = (await _databaseConnection.QueryAsync<SearchResultItem>(
@@ -311,33 +332,90 @@ There's a lot happening here, and in a production scenario it would probably be 
 
 Parameters are the query text and a "top k" value to limit the search. It returns a list of results with the distance - the smaller the distance the more relevant the result.
 
+## Testing the search API
+
+To test the search, issue a POST request using the Sql.SemanticSearch.Api.http script in the API project: 
+
+```
+@Sql.SemanticSearch.Api_HostAddress = http://localhost:5266
+
+POST {{Sql.SemanticSearch.Api_HostAddress}}/api/search/
+Content-Type: application/json
+Accept: application/json
+
+{
+  "query": "I am looking for information on Gradient Descent",
+  "top_k": 3
+}
+```
+
+or curl
+
+```
+curl -X POST https://sql-semanticsearch-api-sql_semanticsearch.dev.localhost:7253/api/search -H "Content-Type: application/json" -d '{"query": "Find papers on Gen AI", "top_k": 5}'
+```
+
+![Search with results.](./images/search_results.png)
+
+## Results
+
 There were some interesting results. One was a paper with a title of "Can apparent superluminal neutrino speeds be explained as a quantum weak measurement?" and a summary "Probably not.". That isn't going to work well with this search. Maybe we need a Title vector index or a combined vector index that includes the title with the summary.
 
 I did some tests with the metadata index, such as a LEAST query that took the closest results from either the summary or the metadata. However, this didn't return very meaningful results and it might be better to have a specialized search query when looking for authors or categories, or maybe those both need their own indexes.
 
+ ## Vector index
+  
+
+I haven't created any index on the vectors. SQL Server 2025 supports approximate nearest neighbour (ANN) vector indexes, but adding it makes the table read-only which isn't appropriate for this proof-of-concept. It makes searches much faster, but as you can tell by the name it only returns approximate results, which is fine in a Gen AI scenario. For now, in my small database I'm sticking with VECTOR_DISTANCE and accepting the slightly slower performance. In a production scenario, vectors could be created in a staging table or separate partition then swapped in and the vector index recreated to work around the limitation.
+
+I've linked information on DiskANN in the References below, Microsoft says the read-only limitation will be removed soon and I look forward to revisiting this when they do.
 
 ## Future improvements
 
-There's a lot that can be built on here. The vector indexing and searching is limited to the document summary; for a real RAG system the PDF documents need to be downloaded, split into chunks, and turned into embedding vectors. I'm going to look that in the near future.
+There's a lot that can be built on here. The vector indexing and searching is limited to the document summary; for a real RAG system the PDF documents need to be downloaded, split into chunks, and turned into embedding vectors. That's something I'll be working on very soon.
 
 - add an MCP server as a function and show how it can be used from a client like GitHub Copilot- 
 - add a notebook showing the difference between PdfPig in C# and Docling in Python for extracting chunking PDF files
 - implement the chunking in another function
 - deploy to Azure
-- database resilience. At the moment everything runs locally, but if the database is moved to Azure then we'll need some recilience. I've had trouble in the past when using serverless databases that need time to warm up, not to mention network errors. '
-
+- database resilience. At the moment everything runs locally, but if the database is moved to Azure then we'll need some resilience. I've had trouble in the past when using serverless databases that need time to warm up, not to mention network errors. '
 
 ## Conclusions
 
 The new AI capabilities in SQL Server have expanded the options for building semantic search applications. It lets the database do all the work for us, simplifying the code needed to create embeddings. 
 
-We used a function app to do the heavy lifting, but if I was moving this towards production a lot of the code could be moved into SQL Server stored procedures. 
+We used inline SQL to do the heavy lifting, but if I was moving this towards production a lot of the code could be moved into SQL Server stored procedures. 
 
 The search is fairly simple for now, because we only pulled in the summary. 
 
+** It isn't a full RAG solution. We just want to show how to add embeddings for semantic search; a future iteration could download files, chunk them into the database, and add a chat capability.
+???
+
+** Specialized vector databases are available, but for SQL Server users that meant a more complicated architecture,  generating vector embeddings in code and saving them into inefficient structures. Now everything is much simpler.
+
+
+** We don't need a chat model at this stage since we are only searching, but it might be added later.
+
 If you're already using SQL Server, there is no need to bring in yet another database. SQL Server 2025 simplifies the application and gives us a scalable, cloud-friendly native SQL application.
 
+
+## Future Improvements
+
+-   Download and chunk PDFs\
+-   Add MCP server integration\
+-   Deploy to Azure\
+-   Improve database resilience\
+-   Add combined title + summary embeddings
+- 
+## Limitations & Observations
+
+-   Summary-only embeddings limit quality\
+-   Metadata search quality is weak\
+-   Vector index is currently read-only\
+-   PDFs are not chunked yet
+
 We haven't talked about Aspire much in this article, but it was instrumental in getting the application to work. I'll give more detail on that next time.
+
 
 ---
 ### Source code
@@ -347,4 +425,53 @@ We haven't talked about Aspire much in this article, but it was instrumental in 
 
 ## References
 
-    https://devblogs.microsoft.com/azure-sql/efficiently-and-elegantly-modeling-embeddings-in-azure-sql-and-sql-server/
+- [Vector search and vector indexes in the SQL Database Engine](https://learn.microsoft.com/en-us/sql/sql-server/ai/vectors?view=sql-server-ver17)
+- [Efficiently and Elegantly Modeling Embeddings in Azure SQL and SQL Server](https://devblogs.microsoft.com/azure-sql/efficiently-and-elegantly-modeling-embeddings-in-azure-sql-and-sql-server/) by Davide Mauri is an excellent place to start.
+- [Database and AI: solutions for keeping embeddings updated](https://devblogs.microsoft.com/azure-sql/database-and-ai-solutions-for-keeping-embeddings-updated/) talks about how to use an Azure Functions Sql Trigger binding
+- [DiskANN: Vector Search for All](https://www.microsoft.com/en-us/research/project/project-akupara-approximate-nearest-neighbor-search-for-large-scale-semantic-search/)
+
+
+---
+Conclusions (Rewritten Draft)
+
+SQL Server 2025’s new AI capabilities significantly expand the options for building semantic search applications. Native vector data types, built-in embedding generation, and vector similarity functions allow the database to do most of the heavy lifting, simplifying both architecture and application code.
+
+In this proof of concept, we used SQL Server itself to generate embeddings via AI_GENERATE_EMBEDDINGS, stored them in vector columns, and performed semantic search using VECTOR_DISTANCE. The only external components were an Azure Function for ingestion and Ollama for running an embedding model locally.
+
+This isn’t a full RAG solution yet. We’re only embedding document summaries, and the PDFs aren’t chunked or indexed. But it demonstrates how easy it is now to add semantic search capabilities directly on top of an existing SQL Server-based system.
+
+Specialized vector databases still make sense for ultra-high-scale or low-latency workloads. But for teams already using SQL Server, there’s no longer a requirement to introduce a second database just to support vector search. SQL Server 2025 makes it possible to build a scalable, cloud-friendly semantic search solution using tools many teams already have.
+
+Aspire was also instrumental in making this work locally without cloud setup or scripts. I’ll go into more detail on that in a future post.
+---
+To fix:
+Recommended Section Order
+Introduction
+Architecture Overview
+Embedding Model
+SQL Server 2025 Schema & Model Setup
+Azure Function: Insert Pipeline
+Querying – Search API
+Testing (ingestion + search together)
+Results
+Vector Index
+Limitations & Observations
+Future Improvements
+Conclusions
+Source Code
+References
+
+---
+. Minor Structural Cleanup
+Merge Duplicate Sections
+
+You currently have:
+  Future improvements
+  Future Improvements
+  Limitations & Observations (near the end)
+
+Merge into:
+  Results
+  Limitations & Observations
+  Future Improvements
+  Conclusions
