@@ -133,55 +133,57 @@ builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>
 {
     client.BaseAddress = new("http://export.arxiv.org/api/");
 });
+```
 
-...
+``` csharp
 string query = $"query?id_list={idList}&start={start}&max_results={maxResults}";
 var response = await _httpClient.GetAsync(query, cancellationToken);
 
 string xmlContent = await response.Content.ReadAsStringAsync(cancellationToken);
 var doc = XDocument.Parse(xmlContent);
 var entries = doc.Descendants(ArxivNamespace.Atom + "entry").ToList();
+```
 
-...
-
-    extension(XElement? entry)
+``` csharp
+extension(XElement? entry)
+{
+    public ArxivPaper? ToArxivPaper()
     {
-        public ArxivPaper? ToArxivPaper()
+        if (entry is null) return null;
+
+        var entryId = entry.Element(ArxivNamespace.Atom + "id")?.Value;
+
+        if (string.IsNullOrEmpty(entryId)) return null;
+
+        var id = entryId.ToShortId();
+
+        var pdfLink = entry.Descendants(ArxivNamespace.Atom + "link")
+            .FirstOrDefault(l => l.Attribute("title")?.Value == "pdf");
+
+        var pdfUrl = pdfLink?.Attribute("href")?.Value;
+        var published = DateTime.TryParse(entry.Element(ArxivNamespace.Atom + "published")?.Value, out var publishedDate) ? publishedDate : DateTime.MinValue;
+
+        return new ArxivPaper(id, entry.Element(ArxivNamespace.Atom + "title")?.Value?.Trim())
         {
-            if (entry is null) return null;
-
-            var entryId = entry.Element(ArxivNamespace.Atom + "id")?.Value;
-
-            if (string.IsNullOrEmpty(entryId)) return null;
-
-            var id = entryId.ToShortId();
-
-            var pdfLink = entry.Descendants(ArxivNamespace.Atom + "link")
-                .FirstOrDefault(l => l.Attribute("title")?.Value == "pdf");
-
-            var pdfUrl = pdfLink?.Attribute("href")?.Value;
-            var published = DateTime.TryParse(entry.Element(ArxivNamespace.Atom + "published")?.Value, out var publishedDate) ? publishedDate : DateTime.MinValue;
-
-            return new ArxivPaper(id, entry.Element(ArxivNamespace.Atom + "title")?.Value?.Trim())
-            {
-                PdfUri = pdfUrl is not null ? new Uri(pdfUrl) : null,
-                Summary = entry.Element(ArxivNamespace.Atom + "summary")?.Value?.Trim() ?? string.Empty,
-                Comments = entry.Element(ArxivNamespace.Atom + "comment")?.Value?.Trim(),
-                Published = published,
-                Authors = entry.Descendants(ArxivNamespace.Atom + "author")
-                    .Select(a => a.Element(ArxivNamespace.Atom + "name")?.Value)
-                    .Where(name => !string.IsNullOrEmpty(name))
-                    .Select(name => name!)
+            PdfUri = pdfUrl is not null ? new Uri(pdfUrl) : null,
+            Summary = entry.Element(ArxivNamespace.Atom + "summary")?.Value?.Trim() ?? string.Empty,
+            Comments = entry.Element(ArxivNamespace.Atom + "comment")?.Value?.Trim(),
+            Published = published,
+            Authors = entry.Descendants(ArxivNamespace.Atom + "author")
+                .Select(a => a.Element(ArxivNamespace.Atom + "name")?.Value)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Select(name => name!)
+                .ToList()
+                ?? [],
+            Categories = entry.Descendants(ArxivNamespace.Atom + "category")
+                .Select(c => c.Attribute("term")?.Value)
+                    .Where(term => !string.IsNullOrEmpty(term))
+                    .Select(term => term!)
                     .ToList()
-                    ?? [],
-                Categories = entry.Descendants(ArxivNamespace.Atom + "category")
-                    .Select(c => c.Attribute("term")?.Value)
-                        .Where(term => !string.IsNullOrEmpty(term))
-                        .Select(term => term!)
-                        .ToList()
-                        ?? []
-            };
-        }
+                    ?? []
+        };
+    }
+}
 ```
 
 Once we have the paper it gets saved by a series of calls to the database, all wrapped in a transaction. I'm using Dapper and all the SQL is embedded in my C# code. You might think stored procedures would be better, and you might be right, but for early development I find this way much easier.
@@ -201,67 +203,67 @@ transaction.Commit();
 ```
 
 ``` csharp
-    private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>
-        await _databaseConnection.ExecuteAsync(
-            """
-            DELETE FROM DocumentSummaryEmbeddings
-            WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
-            
-            DELETE FROM DocumentMetadataEmbeddings
-            WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
+private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>
+    await _databaseConnection.ExecuteAsync(
+        """
+        DELETE FROM DocumentSummaryEmbeddings
+        WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
+        
+        DELETE FROM DocumentMetadataEmbeddings
+        WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
 
-            DELETE FROM dbo.Documents
-            WHERE [ArxivId] = @ArxivId;            
-            """,
-            new { ArxivId = arxivId },
-            transaction: transaction);
+        DELETE FROM dbo.Documents
+        WHERE [ArxivId] = @ArxivId;            
+        """,
+        new { ArxivId = arxivId },
+        transaction: transaction);
 
-    private async Task<int> SaveDocument(ArxivPaper paper, System.Data.IDbTransaction transaction) =>
-        await _databaseConnection.ExecuteScalarAsync<int>(
-            """
-            INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])                            
-            VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
+private async Task<int> SaveDocument(ArxivPaper paper, System.Data.IDbTransaction transaction) =>
+    await _databaseConnection.ExecuteScalarAsync<int>(
+        """
+        INSERT INTO dbo.Documents ([ArxivId], [Title], [Summary], [Comments], [Metadata], [PdfUri], [Published])                            
+        VALUES (@ArxivId, @Title, @Summary, @Comments, @Metadata, @PdfUri, @Published);
 
-            SELECT CAST(SCOPE_IDENTITY() as int);
-            """,
-            new
-            {
-                ArxivId = paper.Id,
-                paper.Title,
-                paper.Summary,
-                paper.Comments,
-                Metadata = paper.MetadataString,
-                PdfUri = paper.PdfUri?.ToString(),
-                paper.Published
-            },
-            transaction: transaction);
+        SELECT CAST(SCOPE_IDENTITY() as int);
+        """,
+        new
+        {
+            ArxivId = paper.Id,
+            paper.Title,
+            paper.Summary,
+            paper.Comments,
+            Metadata = paper.MetadataString,
+            PdfUri = paper.PdfUri?.ToString(),
+            paper.Published
+        },
+        transaction: transaction);
 
-    /* Note: Embedding model is *NOT* a SQL injection risk, it must be hard-coded so we have to use the settings value. */
-    private async Task SaveDocumentSummaryEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
+/* Note: Embedding model is *NOT* a SQL injection risk, it must be hard-coded so we have to use the settings value. */
+private async Task SaveDocumentSummaryEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
+    await _databaseConnection.ExecuteAsync(
+        $"""
+        INSERT INTO dbo.DocumentSummaryEmbeddings ([Id], [Embedding])
+        SELECT @Id,
+                AI_GENERATE_EMBEDDINGS(d.[Summary] USE MODEL {_aiSettings.ExternalEmbeddingModel})
+        FROM dbo.Documents d
+        WHERE d.[Id] = @Id
+            AND d.[Summary] IS NOT NULL;
+        """,
+        new { Id = documentId },
+        transaction: transaction);
+
+private async Task SaveDocumentMetadataEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
         await _databaseConnection.ExecuteAsync(
             $"""
-            INSERT INTO dbo.DocumentSummaryEmbeddings ([Id], [Embedding])
+            INSERT INTO dbo.DocumentMetadataEmbeddings ([Id], [Embedding])
             SELECT @Id,
-                   AI_GENERATE_EMBEDDINGS(d.[Summary] USE MODEL {_aiSettings.ExternalEmbeddingModel})
+                    AI_GENERATE_EMBEDDINGS(CAST(d.[Metadata] AS NVARCHAR(MAX)) USE MODEL {_aiSettings.ExternalEmbeddingModel})
             FROM dbo.Documents d
             WHERE d.[Id] = @Id
-                AND d.[Summary] IS NOT NULL;
+                AND d.[Metadata] IS NOT NULL;
             """,
-            new { Id = documentId },
-            transaction: transaction);
-
-    private async Task SaveDocumentMetadataEmbeddings(int documentId, System.Data.IDbTransaction transaction) =>
-            await _databaseConnection.ExecuteAsync(
-                $"""
-                INSERT INTO dbo.DocumentMetadataEmbeddings ([Id], [Embedding])
-                SELECT @Id,
-                        AI_GENERATE_EMBEDDINGS(CAST(d.[Metadata] AS NVARCHAR(MAX)) USE MODEL {_aiSettings.ExternalEmbeddingModel})
-                FROM dbo.Documents d
-                WHERE d.[Id] = @Id
-                    AND d.[Metadata] IS NOT NULL;
-                """,
-            new { Id = documentId },
-            transaction: transaction);
+        new { Id = documentId },
+        transaction: transaction);
 ```
 
 The most interesting thing here is AI_GENERATE_EMBEDDINGS which tells SQL Server to make a call to the external server to generate the embedding. 
@@ -291,7 +293,7 @@ or use Postman or a curl command:
 curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950"]}'
 ```
 
-This can run for a while, so I don't recommend sending large requests. I had to increase the REST API timeout in Visual Studio (go to Tools..Options, search for `REST advanced`) so I could send a reasonably large request.
+This can run for a while, so I don't recommend sending large requests. I had to increase the REST API timeout in Visual Studio (go to Tools..Options, search for "REST advanced") so I could send a reasonably large request.
 
 ## Querying with the Search API
 
@@ -357,7 +359,7 @@ curl -X POST https://sql-semanticsearch-api-sql_semanticsearch.dev.localhost:725
 
 There were some interesting results. One was a paper with a title of "Can apparent superluminal neutrino speeds be explained as a quantum weak measurement?" and a summary "Probably not.". That isn't going to work well with this search. Maybe we need a Title vector index or a combined vector index that includes the title with the summary:
 ```
- AI_GENERATE_EMBEDDINGS(FORMATMESSAGE('Title: %s. Summary: %s', d.[Title], d.[Summary]) USE MODEL SemanticSearchEmbeddingModel)
+AI_GENERATE_EMBEDDINGS(FORMATMESSAGE('Title: %s. Summary: %s', d.[Title], d.[Summary]) USE MODEL SemanticSearchEmbeddingModel)
 ```
 
 Alternatively add an embedding table for the Title column and use a LEAST query that gets the closest match of either the title or the summary, like this:

@@ -5,7 +5,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "query": "I am looking for information on Gradient Descent",
+  "query": "Find papers on neutrinos",
   "top_k": 3
 }
 
