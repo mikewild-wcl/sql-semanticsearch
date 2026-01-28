@@ -9,28 +9,17 @@ Uses SQL Server 2025 and Azure SQL vector capabilities to ingest and embed docum
 ## Project structure
 
 sql-semanticsearch/
-├── Sql.Vector.SemanticSearch.AppHost
-├── Sql.SemanticSearch.Api
-├── Sql.Vector.SemanticSearch.Core
-├── Sql.Vector.SemanticSearch.DatabaseDeploymentService
-├── Sql.Vector.SemanticSearch.Ingestion.Functions
-├── Sql.Vector.SemanticSearch.Query.Functions
-├── Sql.Vector.SemanticSearch.Shared
-│   Tests
-│   ├── Sql.SemanticSearch.Ingestion.Functions.UnitTests
-│   ├── Sql.SemanticSearch.Query.Functions.UnitTests
-│   ├── Sql.Vector.Embeddings.SemanticSearch.Core.UnitTests
-│   ├── Sql.SemanticSearch.Tests.Helpers
+├── Sql.SemanticSearch.AppHost        # Aspire orchestrator for local development
+├── Sql.SemanticSearch.Api            # ASP.NET minimal API for search queries
+├── Sql.SemanticSearch.Core           # Core library with shared models and services
+├── Sql.SemanticSearch.DatabaseDeployment  # DbUp deployment of SQL schema and external models
+├── Sql.SemanticSearch.Ingestion.Functions # Azure Functions for document ingestion
+├── Sql.SemanticSearch.ServiceDefaults     # Shared Aspire service configuration
+├── Sql.SemanticSearch.Shared              # Shared utilities
 ├── .editorconfig
 ├── .gitignore
 ├── README.md
-└── (other files and directories, e.g., user secrets, settings, and external SQL scripts)
-
- - AppHost - Console app to host the function app locally for testing
- - FunctionApp - Azure function app to ingest documents
- - DatabaseDeploymentService - DbUp deployment of the SQL database schema and external models
- - Data - Data classes
- - Ingestion.Core - ingestion application classes
+└── docs/                             # Documentation and articles
 
 ## SQL database
 
@@ -53,19 +42,14 @@ The embedding model is created in the database deployment scripts. The external 
 
 ## Call function app and API
 
-The function app expects an array called `uris` with an array of uris pointing to pdf files. 
+The ingestion function accepts a list of arXiv document IDs. The function fetches metadata from the arXiv API, saves documents to SQL Server, and generates vector embeddings using `AI_GENERATE_EMBEDDINGS`.
 
-There is a test script `Functions.http` in the functions folder that can be used to call it. If you have a lot of requests the call could timeout easily, so I recommend increasing the timeout. In Visual Studio go to Tools..Options, search for `REST advanced` and you will see a timeout - set to something more than the default 20 seconds. 
+There is a test script `Functions.http` in the functions folder that can be used to call it. If you have a lot of requests the call could timeout easily, so I recommend increasing the timeout. In Visual Studio go to Tools..Options, search for `REST advanced` and you will see a timeout - set to something more than the default 20 seconds.
 ![Where to set REST request timeout.](./images/vs_rest_timeout.png)
-
-A timeout can also be set in `host.json` for the function app, but this can't be longer than the time for the plan the function runs under, so it probably won't make a difference.
-```
-  "functionTimeout": "00:05:00"
-```
 
 Alternatively call from a command line using curl.
 ```
-curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950"] }'
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473", "2510.04950"]}'
 ```
 
 > [!Tip]
@@ -75,6 +59,27 @@ curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: applic
 To call the API use the script in `Sql.SemanticSearch.Api.http` or call from curl:
 ```
 curl -X POST https://sql-semanticsearch-api-sql_semanticsearch.dev.localhost:7253/api/search -H "Content-Type: application/json" -d '{"query": "Find papers on Gen AI", "top_k": 5}'
+```
+
+## arXiv ids
+
+Valid arxiv ids look like `1409.0473` or `hep-th/9901001` (pre-2007). For more see [Understanding the arXiv identifier](https://info.arxiv.org/help/arxiv_identifier.html).
+There is minimal validation and de-duplication of the ids in the code. I added a regex:
+``` csharp
+var arxivRegex = new Regex(
+    @"^(?:\d{4}\.\d{4,5}|[a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?$",
+    RegexOptions.IgnoreCase);
+```
+Breakdown:
+```
+^
+(?:                              # Either:
+  \d{4}\.\d{4,5}                  #   New-style: YYMM.NNNN or YYMM.NNNNN
+  |                               #   OR
+  [a-z\-]+(?:\.[A-Z]{2})?/\d{7}   #   Old-style: archive(.SUB)/YYMMNNN
+)
+(?:v\d+)?                         # Optional version suffix
+$
 ```
 
 ## Aspire hosting and deployment
@@ -105,16 +110,10 @@ Thank you to arXiv for use of its open access interoperability.
 
 ## API
 
-The API project contains a simple web api to query the database. It has a single endpoint `/search` that takes a query string parameter and returns the top 10 results from the database.
+The API project is an ASP.NET Core minimal API for search queries. It uses `AI_GENERATE_EMBEDDINGS` to create an embedding for the search query, then compares it against stored embeddings using `VECTOR_DISTANCE` (cosine distance).
 
-The API uses Scalar to expose OpenAPI information.
+The `/api/search` endpoint accepts a POST request with a query and returns the top results from the database.
 
-Scalar has been added to the AppHost - see [Scalar API Reference for .NET Aspire](https://scalar.com/products/api-references/integrations/aspire).
+Scalar has been added to the AppHost for OpenAPI documentation - see [Scalar API Reference for .NET Aspire](https://scalar.com/products/api-references/integrations/aspire).
 
-OpenApi has been implemented for the web application and enabled when running in development mode.
-To see the OpenApi specification browse to https://localhost:7185/openapi/v1.json
-
-Scalar has also been included, and can be used to test the API at https://<uri>>:<port>>/scalar/v1. 
-
-
-
+OpenAPI is enabled when running in development mode. Scalar can be used to test the API at `https://<uri>:<port>/scalar/v1`.

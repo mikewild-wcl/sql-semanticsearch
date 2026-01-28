@@ -60,7 +60,7 @@ public class SearchService(
                                VECTOR_DISTANCE('cosine', ds.embedding, @vector) AS [Distance]
                 FROM dbo.Documents d
                 INNER JOIN dbo.DocumentSummaryEmbeddings ds ON ds.id = d.id
-                ORDER BY Distance ASC;
+                ORDER BY [Distance] ASC;
                 """,
                 new
                 {

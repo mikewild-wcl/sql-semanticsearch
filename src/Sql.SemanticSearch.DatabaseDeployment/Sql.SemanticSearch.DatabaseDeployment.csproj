@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="sql\00-enable-preview-features.sql" />
+    <EmbeddedResource Include="sql\00-server-configuration-enable-preview-features.sql" />
     <EmbeddedResource Include="sql\01-server-configuration.sql" />
     <EmbeddedResource Include="sql\02-schemas.sql" />
     <EmbeddedResource Include="sql\03-security.sql" />

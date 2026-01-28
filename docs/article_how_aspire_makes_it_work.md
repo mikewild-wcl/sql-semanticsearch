@@ -1,13 +1,11 @@
 # Aspire
 
+In my last article I showed a project that used an Azure function, an ASP.NET Web API, an LLM embedding model hosted by Ollama, and a dev tunnel that exposed Ollama over https. There's a lot of plumbing there, but it was pretty easy to put together using Aspire.
 
-## Overview
-
-- Aspire AppHost and ServiceExtensons
-  - Ollama for simplicity and local development  
-  - SQL Server in Docker
-  - DBUp for deployment
-  - Azure functions as the work layer 
+???
+The API calls here mean we aren't completely local-first, but that's fine for this initial version. In future a workaround can be created, e.g. a fake api that provides test data.
+I've included a script that drops all the tables in the repo - sql/clean_documents_database.sql.
+???
 
 ## Creating the basic application
 
@@ -75,7 +73,7 @@ Last time I mentioned that we aren't completely local-first because the function
 
 ## API project
 
-Added `Scalar.Aspire` to the AppHost to provide a front end for OpenAPI.
+Added `Scalar.Aspire` to the AppHost to provide a front end for OpenAPI. Scalar is the modern way and replaces Swagger.
 ```
 using Scalar.Aspire;
 ...
