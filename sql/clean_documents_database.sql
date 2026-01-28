@@ -41,7 +41,6 @@ DROP TABLE IF EXISTS dbo.[$__dbup_journal]
 
 --DROP SCHEMA IF EXISTS [test];
 
-IF EXISTS (SELECT * FROM sys.external_models WHERE name = 'SqlVectorSampleOllamaEmbeddingModel')
-	DROP EXTERNAL MODEL SqlVectorSampleOllamaEmbeddingModel
-
+IF EXISTS (SELECT * FROM sys.external_models WHERE name = 'SemanticSearchEmbeddingModel')
+	DROP EXTERNAL MODEL SemanticSearchEmbeddingModel
 

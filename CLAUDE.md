@@ -8,17 +8,23 @@ Sql.SemanticSearch is a library that enables semantic search capabilities within
 
 ## Architecture
 
-The solution consists of five main projects:
+The solution consists of these main projects:
 
-- **Sql.SemanticSearch.AppHost**: Aspire orchestrator that coordinates all services. Entry point is `AppHost.cs` which creates a minimal `DistributedApplication` (currently empty, resources should be added as needed).
+- **Sql.SemanticSearch.AppHost**: Aspire orchestrator that coordinates all services including SQL Server, Ollama, the ingestion function, and search API.
 
 - **Sql.SemanticSearch.ServiceDefaults**: Shared library providing common Aspire service configuration (OpenTelemetry, service discovery, resilience, health checks). Contains `AddServiceDefaults()` extension method.
 
-- **Sql.SemanticSearch.Ingestion.Functions**: Azure Functions v4 app for document ingestion. Uses isolated worker model with ASP.NET Core integration. Contains `IndexArxivDocuments` HTTP-triggered function that accepts arXiv document IDs for indexing.
+- **Sql.SemanticSearch.Ingestion.Functions**: Azure Functions v4 app for document ingestion. Uses isolated worker model with ASP.NET Core integration. Contains `IndexArxivDocuments` HTTP-triggered function that accepts arXiv document IDs, fetches metadata from arXiv API, saves to SQL Server, and generates embeddings using `AI_GENERATE_EMBEDDINGS`.
 
-- **Sql.SemanticSearch.Core**: Core library containing shared models and logic (e.g., `IndexingRequest`).
+- **Sql.SemanticSearch.Api**: ASP.NET Core minimal API for search queries. Uses `AI_GENERATE_EMBEDDINGS` to create query embeddings and `VECTOR_DISTANCE` (cosine) to find similar documents.
 
-- **Unit Test Projects**: `Sql.SemanticSearch.Core.UnitTests` and `Sql.SemanticSearch.Ingestion.Functions.UnitTests` using xUnit v3, Shouldly, and NSubstitute.
+- **Sql.SemanticSearch.DatabaseDeployment**: DbUp-based deployment of SQL schema including vector tables and external embedding model configuration.
+
+- **Sql.SemanticSearch.Core**: Core library containing shared models, services, and database access logic.
+
+- **Sql.SemanticSearch.Shared**: Shared utilities across projects.
+
+- **Unit Test Projects**: Using xUnit v3, Shouldly, and NSubstitute.
 
 ### Key Architectural Patterns
 
@@ -58,7 +64,12 @@ dotnet run --project src/Sql.SemanticSearch.AppHost
 
 Call the ingestion function (when running locally):
 ```
-curl -X POST http://localhost:7031/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473"]}'
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["1409.0473"]}'
+```
+
+Call the search API (when running locally):
+```
+curl -X POST http://localhost:5266/api/search -H "Content-Type: application/json" -d '{"query": "neural networks", "top_k": 5}'
 ```
 
 ## SQL Database Configuration

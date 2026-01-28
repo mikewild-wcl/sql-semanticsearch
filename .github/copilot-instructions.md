@@ -4,12 +4,12 @@
 
 ## Project Context
 - .NET 10, C#
-- Azure SQL 2025 vector capabilities
-- AI document ingestion, embedding, and search
-- Worker Service and Azure Function App patterns
+- SQL Server 2025 and Azure SQL vector capabilities
+- AI document ingestion, embedding, and semantic search
+- Azure Function App for ingestion, ASP.NET Core minimal API for search
+- .NET Aspire for orchestration (SQL Server, Ollama, Functions, API)
 - Strict adherence to .editorconfig and CONTRIBUTING.md
-- This is a .NET Aspire project. 
-- Package versions are centrally managed in Directory.Packages.props.
+- Package versions are centrally managed in Directory.Packages.props
 
 ## Coding Guidelines
 - Always follow .editorconfig and CONTRIBUTING.md for formatting, naming, and style.
@@ -27,10 +27,11 @@
 - Use Primary Constructors. **DO NOT** replace primary constructors when refactoring or adding code.
 
 ## Project-Specific Practices
-- For database access, use SQL Server 2025 features and vector search patterns.
-- For AI/embedding, integrate with external models as described in the README.
-- For Azure Functions, follow the function signature and binding conventions.
-- For configuration, use appsettings and secrets as described in the README.
+- For database access, use SQL Server 2025 features: `VECTOR` data type, `AI_GENERATE_EMBEDDINGS`, `VECTOR_DISTANCE`.
+- For AI/embedding, use external models configured via `CREATE EXTERNAL MODEL` (Ollama or OpenAI).
+- For Azure Functions, follow the isolated worker model with HTTP triggers.
+- For search API, use ASP.NET Core minimal API patterns.
+- For configuration, use appsettings and user secrets as described in the README.
 
 ## Testing Guidelines
 
@@ -40,8 +41,8 @@
 - **Mocking**: **NSubstitute v5.3.0** or above - Use ONLY NSubstitute for test doubles, NOT Moq
 
 ### Test Project Structure
-- Unit test projects: `Sql.Vector.Embeddings.{Component}.UnitTests`
-- Integration test projects: `Sql.Vector.Embeddings.{Component}.IntegrationTests`
+- Unit test projects: `Sql.SemanticSearch.{Component}.UnitTests`
+- Integration test projects: `Sql.SemanticSearch.{Component}.IntegrationTests`
 
 ### Testing Best Practices
 - **Always use Shouldly syntax**: `result.ShouldBe(expected);` instead of `Assert.Equal(expected, result);`

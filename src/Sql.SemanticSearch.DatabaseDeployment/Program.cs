@@ -11,7 +11,7 @@ using System.Globalization;
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
 
 const string AlwaysRunTag = "always-run";
-const string EnablePreviewFeaturesTag = "enable-preview-features";
+const string ServerConfigurationTag = "server-configuration";
 
 var builder = Host.CreateApplicationBuilder();
 builder.AddServiceDefaults();
@@ -56,7 +56,8 @@ var result = DeployChanges.To
     .WithVariables(variables)
     .WithScriptsEmbeddedInAssembly(
             typeof(Program).Assembly,
-            f => f.Contains(EnablePreviewFeaturesTag, StringComparison.InvariantCultureIgnoreCase))
+            /* Server configuration scripts that have to run outside of a transaction */
+            f => f.Contains(ServerConfigurationTag, StringComparison.InvariantCultureIgnoreCase))
     .AddLoggerFromServiceProvider(serviceProvider)
     .Build()
     .PerformUpgrade();

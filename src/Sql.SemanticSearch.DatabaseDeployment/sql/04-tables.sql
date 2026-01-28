@@ -6,7 +6,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_
         [ArxivId] NVARCHAR(50) NULL,
         [Title] NVARCHAR(300) NOT NULL,
         [Summary] NVARCHAR(MAX) NULL,
-        [CommentS] NVARCHAR(MAX) NULL,
+        [Comments] NVARCHAR(MAX) NULL,
         [Metadata] JSON NULL,
         [PdfUri] NVARCHAR(1000) NOT NULL,
         [Published] DATETIME2(0) NOT NULL,
