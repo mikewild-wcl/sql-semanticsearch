@@ -6,7 +6,7 @@
 
 # Python setup 
 
-In VS Code, open the command palette and run Python: Create Environment, select an interpreter and let it create your environment in the .venv folder. Then activate it running Python: Select Interpreter from the command palette. You can also run the following command:
+In VS Code, open the command palette and run  **Python: Create Environment**, select an interpreter and let it create your environment in the .venv folder. Then activate it by running **Python: Select Interpreter** from the command palette or by running the following command:
 ```
 .venv/scripts/activate
 ```
@@ -18,7 +18,7 @@ pip install ipykernel
 python -m ipykernel install --user --name=semanticsearchkernelspec 
 ```
 
-This will create a new kernel in your user Roaming foldwer - you can list it with
+This will create a new kernel in your user Roaming folder - you can list it with
 ```
 ls ${env:APPDATA}/jupyter/kernels/semanticsearchkernelspec
 ```
