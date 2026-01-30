@@ -1,6 +1,6 @@
 #!meta
 
-{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"csharp"},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"semanticsearchkernelspec","languageName":"python"},{"name":"value"}]}}
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"csharp"},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"semanticsearchkernelspec","languageName":"python"},{"name":"semanticsearchkernelspec_python","languageName":"python"},{"name":"value"}]}}
 
 #!markdown
 
@@ -10,23 +10,59 @@ Simple .NET examples use PdFPig to chunk pdf files, or simple Open XML manipulat
 
 In this notebook I want to explore how this can be done and compare it with another approach like [Docling](https://github.com/docling-project/docling).
 
+#!markdown
+
+## Python setup 
+
+In VS Code, open the command palette and run **Python: Create Environment**, select an interpreter and let it create your environment in the .venv folder. Then activate it by running **Python: Select Interpreter** from the command palette or by running the following command:
+```
+.venv/scripts/activate
+```
+
+Then in the terminal you can install ipykernel and create a new kernel - in this example I'm creating one for this project.
+
+```
+pip install ipykernel
+python -m ipykernel install --user --name=semanticsearchkernelspec_python
+```
+
+This will create a new kernel in your user Roaming folder - you can list it with
+```
+ls ${env:APPDATA}/jupyter/kernels/semanticsearchkernelspec
+ls ${env:APPDATA}/jupyter/kernels/semanticsearchkernelspec_python
+```
+
+You should then be able to add this magic command to a polyglot notebook code cell 
+
+```
+#!connect jupyter --kernel-name semanticsearchkernelspec_python --kernel-spec semanticsearchkernelspec_python
+```
+
+This project also needs
+```
+pip install requests docling
+pip install 'docling-core[chunking]'
+```
+
 #!csharp
 
-#!connect jupyter --kernel-name semanticsearchkernelspec --kernel-spec semanticsearchkernelspec
+# Using new kernel for this notebook
+#!connect jupyter --kernel-name semanticsearchkernelspec_python --kernel-spec semanticsearchkernelspec_python
 
 #!csharp
 
 #r "nuget:DocumentFormat.OpenXml, *-*"
 #r "nuget:PdfPig, *-*"
 #r "nuget:System.Net.Http, *-*"
+#r "nuget:Microsoft.SemanticKernel.Core, *-*"
 
 const string downloadFolder = @"..\downloads";
 
 #!csharp
 
 using System.IO;
+using System.Net.Http;
 using System.Xml;
-
 
 if (!Directory.Exists(downloadFolder))
 {
@@ -37,27 +73,17 @@ if (!Directory.Exists(downloadFolder))
 
 ## Word document in C#
 
-Read and extract text from a word document. This code is adabpted from [](https://learn.microsoft.com/en-us/semantic-kernel/concepts/vector-store-connectors/how-to/vector-store-data-ingestion?pivots=programming-language-csharp)
+Read and extract text from a word document. This code is adapted from [How to ingest data into a Vector Store using Semantic Kernel (Preview)](https://learn.microsoft.com/en-us/semantic-kernel/concepts/vector-store-connectors/how-to/vector-store-data-ingestion?pivots=programming-language-csharp)
 
 :note!
 You will need to copy the document to the downloads folder in the repo first.
 
 #!csharp
 
+#nullable enable
+
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-
-string ReadWordDocument(string filePath)
-{
-    using var wordDoc = WordprocessingDocument.Open(filePath, false);
-    
-    var body = wordDoc.MainDocumentPart.Document.Body;
-    return body.InnerText;    
-}
-
-ReadWordDocument(Path.Combine(downloadFolder, "sample.docx"))
-
-#!csharp
 
 internal class TextParagraph
 {
@@ -69,36 +95,32 @@ internal class TextParagraph
 
     public required string Text { get; init; }
 
-    /// <summary>The embedding generated from the Text.</summary>
     public ReadOnlyMemory<float> TextEmbedding { get; set; }
 }
 
-public static IEnumerable<TextParagraph> ReadParagraphs(Stream documentContents, string documentUri)
+public static IEnumerable<TextParagraph> ReadParagraphs(string filePath, string documentUri)
 {
-    Console.WriteLine("opeing word doc");
-    // Open the document.
-    using WordprocessingDocument wordDoc = WordprocessingDocument.Open(documentContents, false);
-    Console.WriteLine("opened word doc");
+    using var wordDoc = WordprocessingDocument.Open(filePath, false);
+
     if (wordDoc.MainDocumentPart == null)
     {
         yield break;
     }
 
-    XmlDocument xmlDoc = new XmlDocument();
-    XmlNamespaceManager nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
+    var xmlDoc = new XmlDocument();
+    var nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
     nsManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
     nsManager.AddNamespace("w14", "http://schemas.microsoft.com/office/word/2010/wordml");
 
     xmlDoc.Load(wordDoc.MainDocumentPart.GetStream());
 
     // Select all paragraphs in the document and break if none found.
-    XmlNodeList? paragraphs = xmlDoc.SelectNodes("//w:p", nsManager);
+    var paragraphs = xmlDoc.SelectNodes("//w:p", nsManager);
     if (paragraphs == null)
     {
         yield break;
     }
 
-    // Iterate over each paragraph.
     foreach (XmlNode paragraph in paragraphs)
     {
         // Select all text nodes in the paragraph and continue if none found.
@@ -122,10 +144,6 @@ public static IEnumerable<TextParagraph> ReadParagraphs(Stream documentContents,
         var combinedText = textBuilder.ToString();
         if (!string.IsNullOrWhiteSpace(combinedText))
         {
-            // Console.WriteLine("Found paragraph:");
-            // Console.WriteLine(combinedText);
-            // Console.WriteLine();
-
             yield return new TextParagraph
             {
                 Key = Guid.NewGuid().ToString(),
@@ -138,11 +156,105 @@ public static IEnumerable<TextParagraph> ReadParagraphs(Stream documentContents,
 }
 
 var filePath = Path.Combine(downloadFolder, "sample.docx");
-var textParagraphs = ReadParagraphs(
-        new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read),
-        new Uri(Path.GetFullPath(filePath)).ToString());
+var textParagraphs = ReadParagraphs(filePath, new Uri(Path.GetFullPath(filePath)).ToString()).ToList();
 
-Console.WriteLine($"Word doc has {textParagraphs.Count()} paragraphs.");
-Console.WriteLine();
+Console.WriteLine($"Word doc has {textParagraphs.Count} paragraphs.\n");
 
-textParagraphs.Take(10).Select(p => p.Text).ToList().ForEach(t => Console.WriteLine(t));
+textParagraphs
+    .Take(20)
+    .Select(p => p.Text)
+    .ToList()
+    .ForEach(t => Console.WriteLine(t));
+
+#!markdown
+
+## PDF in C#
+
+Read and extract text from a PDF document using PDFPig. This code is adapted from the AI Chat App template.
+
+The file will be downloaded from arXiv if it doesn't already exist in the local downloads folder.
+
+#!semanticsearchkernelspec_python
+
+# Use Python to download the file
+import os
+import requests
+
+url = "https://arxiv.org/pdf/1706.03762"
+pdf_filename = "attention-is-all.pdf"
+
+response = requests.get(url)
+if response.status_code == 200:
+    pwd = os.getcwd()
+    pdf_filepath = os.path.join(pwd, "../downloads", pdf_filename)
+
+    with open(pdf_filepath, "wb") as pdf_file:
+        pdf_file.write(response.content)
+
+    print(f"PDF downloaded and saved to: {pdf_filepath}")
+else:
+    print(f"Failed to download the PDF. Status code: {response.status_code}")
+
+#!csharp
+
+using System.IO;
+using Microsoft.SemanticKernel.Text;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
+
+
+//Code from older version of chat app - latest is using MS Microsoft.Extensions.DataIngestion.MarkItDown
+private static IEnumerable<(int PageNumber, int IndexOnPage, string Text)> GetPageParagraphs(Page pdfPage)
+{
+    var letters = pdfPage.Letters;
+    var words = NearestNeighbourWordExtractor.Instance.GetWords(letters);
+    var textBlocks = DocstrumBoundingBoxes.Instance.GetBlocks(words);
+    var pageText = string.Join(Environment.NewLine + Environment.NewLine,
+        textBlocks.Select(t => t.Text.ReplaceLineEndings(" ")));
+
+#pragma warning disable SKEXP0050 // Type is for evaluation purposes only
+    return TextChunker.SplitPlainTextParagraphs([pageText], 200)
+        .Select((text, index) => (pdfPage.Number, index, text));
+#pragma warning restore SKEXP0050 // Type is for evaluation purposes only
+}
+
+private static IEnumerable<(int PageNumber, int IndexOnPage, string Text)> ExtractParagraphsFromPdf(string filePath)
+{
+    using var document = PdfDocument.Open(filePath);
+    var paragraphs = document.GetPages().SelectMany(GetPageParagraphs).ToList();
+
+    foreach (var paragraph in paragraphs)
+    {
+        yield return paragraph;
+    }
+}
+
+private static IEnumerable<string> ExtractTextFromPdf(string filePath)
+{
+    using var document = PdfDocument.Open(filePath);
+    var paragraphs = document.GetPages().SelectMany(GetPageParagraphs).ToList();
+
+    foreach (var page in document.GetPages())
+    {
+        yield return page.Text;
+    }
+}
+
+var pdfFilePath = Path.Combine(downloadFolder, "attention-is-all.pdf");
+//var chunks = ExtractTextFromPdf(pdfFilePath).ToList();
+var chunks = ExtractParagraphsFromPdf(pdfFilePath).ToList();
+
+Console.WriteLine($"PDF doc has {chunks.Count} paragraphs.\n");
+
+chunks
+    .Take(20)
+    .Where(p => !string.IsNullOrWhiteSpace(p.Text))
+    .Select(p => new { Text = $"<<{p.Text}--", Length = p.Text.Length, Page = p.PageNumber, Index = p.IndexOnPage })
+    .ToList()
+    .ForEach(t => Console.WriteLine($"Page {t.Page}, Index {t.Index}, Length {t.Length}: {t.Text}"));
+
+#!semanticsearchkernelspec_python
+
+#from docling.chunking import HybridChunker
