@@ -2,7 +2,6 @@ using Scalar.Aspire;
 using Sql.SemanticSearch.AppHost.Extensions;
 using Sql.SemanticSearch.AppHost.ParameterDefaults;
 using Sql.SemanticSearch.Shared;
-using System.Collections.Generic;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -45,7 +44,7 @@ var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(Resourc
     .WaitFor(devTunnel)
     .WaitFor(sqlServer);
 
-var ingestionFunctions = builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.IngestionFunctions)
+builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.IngestionFunctions)
     .WithReference(sqlServer)
     .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
@@ -63,19 +62,7 @@ builder.AddScalarApiReference(options =>
     options
         .PreferHttpsEndpoint()
         .AllowSelfSignedCertificates();
-
-    // Attempt at fix for CORS errors in functions app when access <uri>api/swagger/ui
-    // https://github.com/dotnet/aspire/discussions/6989
-    var proxyUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-    if (!string.IsNullOrEmpty(proxyUrls))
-    {
-        options.Servers = [.. 
-            proxyUrls
-                .Split(';')
-                .Select(x => new ScalarServer(x)) ];
-    }
 })
-    .WithApiReference(api)
-    .WithApiReference(ingestionFunctions);
+    .WithApiReference(api);
 
 await builder.Build().RunAsync().ConfigureAwait(true);
