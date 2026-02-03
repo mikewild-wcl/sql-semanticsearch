@@ -10,11 +10,6 @@ In my last article I showed a project that used an Azure function, an ASP.NET We
 - Scalar, an API Client for OpenAPI
  
 - There's a lot of plumbing involved, but it was pretty easy to put together using Aspire.
-
-
-
-
-
 ???
 The API calls here mean we aren't completely local-first, but that's fine for this initial version. In future a workaround can be created, e.g. a fake api that provides test data.
 I've included a script that drops all the tables in the repo - sql/clean_documents_database.sql.
@@ -29,11 +24,22 @@ A container solution such as Docker or Podman must be installed on your machine.
 ## Creating the basic application
 
 Create an empty Aspire application. I like to use centrally managed nuget packages, add a shared project with constants so I can remove "magic strings" and set up Directory.build.props but those are all optional. I won't go into detail in this article.
+```csharp
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
+```
+
+When adding projects you can remove these lines from the `'csproj` files because they are in Directory.build.props:
+```csharp
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+```
 
 ## Aspire AppHost
 
-We'll need a few nuget packages for Azure functions, SQL Server, Ollama, and DevTunnels - we'll need this last one so that SQL Server can talk to Ollama over https. I've also added Scalar to 
-
+We'll need a few nuget packages for Azure functions, SQL Server, Ollama, and DevTunnels - we'll need this last one so that SQL Server can talk to Ollama over https. I've also added Scalar so we can see the API details using OpenAPI.
 ```
 Aspire.Hosting.Azure.Functions
 Aspire.Hosting.DevTunnels
@@ -43,6 +49,10 @@ Scalar.Aspire
 ```
 
 I've created a shared project which has constants that can be used in place of the magic strings that Aspire templates have given us, and set shortened project names to simplify the AppHost code. Note the additional Aspire attributes in my project file, `AspireProjectMetadataTypeName` to change the names and `IsAspireProjectResource` for the Shared class library project:
+```
+<ProjectReference Include="..\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" AspireProjectMetadataTypeName="SemanticFunctions" />
+<ProjectReference Include="..\Sql.SemanticSearch.Shared\Sql.SemanticSearch.Shared.csproj" IsAspireProjectResource="false" />
+```
 ```
   <ItemGroup>
     <ProjectReference Include="..\Sql.SemanticSearch.Api\Sql.SemanticSearch.Api.csproj" AspireProjectMetadataTypeName="Api" />
@@ -58,10 +68,10 @@ Parameters are defined in `appsettings.json` and can be overridden in user secre
   "AIProvider": "Ollama",
   "EmbeddingModel": "nomic-embed-text",
   "EmbeddingDimensions": 768,
+  "SqlServerExternalEmbeddingModel": "SemanticSearchOllamaEmbeddingModel"
   "SqlServerPort": "",
   "SqlServerPassword": "",
-  "OllamaGpuVendor": "",
-  "SqlServerExternalEmbeddingModel": "SemanticSearchEmbeddingModel"
+  "OllamaGpuVendor": ""
 },
 ```
 
@@ -157,9 +167,7 @@ Dev tunnels allow you to share local web services or APIs to external services. 
 
 Note that dev tunnels are intended for testing and development, and defiantly NOT for production scenarios.
 
-## Database deployment
-
-### DbUp
+## Database deployment with DbUp
 
 The `Sql.SemanticSearch.DatabaseDeployment` uses **DbUp** to deploy the database from scripts embedded into the assembly.
 
@@ -250,9 +258,7 @@ I added `Scalar.Aspire` to the AppHost. Scalar provides a front end for OpenAPI 
 
 
 
-## Fake arXiv API
 
-This solution isn't completely "local only" because it calls the arXiv API. I think that's reasonable, but in some projects I've added another project that works as a fake API that returns data for local testing. It can work well when you want to avoid making expensive or slow calls to external APIs. 
 
 
 **Screenshot**
@@ -260,6 +266,17 @@ This solution isn't completely "local only" because it calls the arXiv API. I th
 
 
 ## Conclusion
+
+### Source code
+[!NOTE] 
+> Source code is available on [GitHub](https://github.com/mikewild-wcl/sql-semanticsearch)
+
+
+## TO DO?
+
+Last time I mentioned that we aren't completely local-first because the functions call an exteral API to get metadata and (in future) download files. We can work around this by setting up a local test fake version of the API. I'm not going to do this for now.
+
+Database resilience. At the moment everything runs locally, but if the database is moved to Azure then we'll need some resilience. I've had trouble in the past when using serverless databases that need time to warm up, not to mention network errors.
 
 ### Source code
 [!NOTE] 
@@ -275,5 +292,3 @@ This solution isn't completely "local only" because it calls the arXiv API. I th
 [Get started with the SQL Server Entity Framework Core integrations](https://aspire.dev/integrations/databases/efcore/sql-server/sql-server-get-started/)
 []()
 []()
-
-SQL Server integration
