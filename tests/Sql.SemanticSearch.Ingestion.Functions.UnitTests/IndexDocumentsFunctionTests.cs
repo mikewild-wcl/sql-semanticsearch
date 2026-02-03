@@ -23,16 +23,30 @@ public class IndexDocumentsFunctionTests
     public async Task Run_ReturnsOk_ForValidIds()
     {
         // Arrange
+        var expected = new
+        {
+            status = 200, //HttpStatusCode.OK,
+            result = "Indexing request successfully processed 2 documents."
+        };
+
         var requestObj = new IndexingRequest { Ids = ["id1", "id2"] };
         var body = JsonSerializer.Serialize(requestObj);
-        var httpRequest = HttpRequestBuilder.Build("POST", "/api/index-documents", body: body, contentType: "application/json");
+        var httpRequest = HttpRequestBuilder.Build(
+            "POST", 
+            "/api/index-documents", 
+            body: body, 
+            contentType: "application/json");
 
         // Act
         var result = await _sut.Run(httpRequest, requestObj, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.ShouldBeOfType<OkObjectResult>();
-        okResult.Value.ShouldBe("Indexing request successfully processed 2 documents.");
+        okResult.Value.ShouldNotBeNull();
+                
+        /* Compare serialized values, to avoid type mismatches or the need for reflection */
+        JsonSerializer.Serialize(okResult.Value)
+            .ShouldBe(JsonSerializer.Serialize(expected));
     }
 
     [Fact]
@@ -41,7 +55,11 @@ public class IndexDocumentsFunctionTests
         // Arrange
         var requestObj = new IndexingRequest { Ids = [] };
         var body = JsonSerializer.Serialize(requestObj);
-        var httpRequest = HttpRequestBuilder.Build("POST", "/api/index-documents", body: body, contentType: "application/json");
+        var httpRequest = HttpRequestBuilder.Build(
+            "POST", 
+            "/api/index-documents", 
+            body: body, 
+            contentType: "application/json");
 
         // Act
         var result = await _sut.Run(httpRequest, requestObj, TestContext.Current.CancellationToken);
@@ -57,7 +75,11 @@ public class IndexDocumentsFunctionTests
         // Arrange
         var requestObj = new IndexingRequest { Ids = null! };
         var body = JsonSerializer.Serialize(requestObj);
-        var httpRequest = HttpRequestBuilder.Build("POST", "/api/index-documents", body: body, contentType: "application/json");
+        var httpRequest = HttpRequestBuilder.Build(
+            "POST", 
+            "/api/index-documents",
+            body: body, 
+            contentType: "application/json");
 
         // Act
         var result = await _sut.Run(httpRequest, requestObj, TestContext.Current.CancellationToken);

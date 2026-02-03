@@ -66,8 +66,8 @@ public class IndexDocumentsFunction(
 
             return new OkObjectResult(
                 new 
-                { 
-                    status = $"{HttpStatusCode.OK}",
+                {
+                    status = (int)HttpStatusCode.OK,
                     result = $"Indexing request successfully processed {indexingRequest.Ids.Count} documents."
                 });
         }
