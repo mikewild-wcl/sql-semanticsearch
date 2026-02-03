@@ -153,6 +153,9 @@ A future version might change to use Azure OpenAI, but for now Ollama keeps thin
 
 ## Dev tunnels
 
+Dev tunnels allow you to share local web services or APIs to external services. In this case we are exposing the Ollama http endpoint as an https endpoint so that SQL Server can use it. At the moment everything is running on the same machine, but it will also work through the internet - I have used them to allow services ruiing in the clod to call services on my local machine for testing and debugging.
+
+Note that dev tunnels are intended for testing and development, and defiantly NOT for production scenarios.
 
 ## Database deployment
 
