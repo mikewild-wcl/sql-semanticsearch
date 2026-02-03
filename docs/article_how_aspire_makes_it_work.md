@@ -1,4 +1,5 @@
-# Aspire
+# How Aspire unlocks local development
+## Using Aspire to develop the SQL Server 2025 Semantic Search application
 
 In my last article I showed a project that used an Azure function, an ASP.NET Web API, an LLM embedding model hosted by Ollama, and a dev tunnel that exposed Ollama over https. There's a lot of plumbing there, but it was pretty easy to put together using Aspire.
 
@@ -17,18 +18,11 @@ I've included a script that drops all the tables in the repo - sql/clean_documen
 
 ## Prerequisites
 
-The application is written for .NET 10 so that's a definite prerequisite. Everything here should work on non-Windows machines, but I haven't tested it.
-
-A container solution such as Docker or Podman must be installed on your machine. I use Docker Desktop on Windows.
+The application is written for .NET 10 and I use Visual Studio 2026, but Visual Studio Code is also a solid choice. Everything here should work on a non-Windows machines. You will also need a container solution like Docker or Podman.
 
 ## Creating the basic application
 
 Create an empty Aspire application. I like to use centrally managed nuget packages, add a shared project with constants so I can remove "magic strings" and set up Directory.build.props but those are all optional. I won't go into detail in this article.
-```csharp
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
-```
 
 When adding projects you can remove these lines from the `'csproj` files because they are in Directory.build.props:
 ```csharp
@@ -238,7 +232,6 @@ if (result.Successful)
 }
 ```
 
-
 ## Function app
 
 Add a function app to the solution. If you select the checkbox for enrolling in the Aspire orchestration it should add everything, but it didn't work when I did it. I had to add a reference to the ServiceDefaults project and call builder.AddServiceDefaults() in Program.cs, then remove the app insights because it will be managed via service defaults:
@@ -247,7 +240,6 @@ builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights();
 ```
-
 
 ## API project
 
@@ -258,12 +250,14 @@ I added `Scalar.Aspire` to the AppHost. Scalar provides a front end for OpenAPI 
 
 
 
-
-
-
 **Screenshot**
 ![Application host running in a browser.](./images/aspire_screenshot.png)
 
+## Resilience
+
+**Database resilience** - Databases c an time out or have transient failures, especially in the cloud. Lasy tear I had frequent failures with an Azure serverless databases that needed time to warm up; to avoid this I've now added r reslilience pipeline. 
+
+**Ollama resilience** - Ollama can respond quite slowly. For our embedding model that is unlikely to happen, but if we add a chat model then it can time out. To work around this I have added `OllamaResilienceHandlerExtensions` which replaces the standard resilience handler with one that has increased timeouts. This is be called immediately after AddServiceDefaults in the function app and the API.
 
 ## Conclusion
 
@@ -276,7 +270,6 @@ I added `Scalar.Aspire` to the AppHost. Scalar provides a front end for OpenAPI 
 
 Last time I mentioned that we aren't completely local-first because the functions call an exteral API to get metadata and (in future) download files. We can work around this by setting up a local test fake version of the API. I'm not going to do this for now.
 
-Database resilience. At the moment everything runs locally, but if the database is moved to Azure then we'll need some resilience. I've had trouble in the past when using serverless databases that need time to warm up, not to mention network errors.
 
 ### Source code
 [!NOTE] 

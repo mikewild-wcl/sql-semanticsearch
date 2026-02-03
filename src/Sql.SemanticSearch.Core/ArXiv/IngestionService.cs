@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
+using Polly.Registry;
 using Sql.SemanticSearch.Core.ArXiv.Exceptions;
 using Sql.SemanticSearch.Core.ArXiv.Extensions;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Core.Messages;
+using Sql.SemanticSearch.Shared;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Sql.SemanticSearch.Core.ArXiv;
@@ -12,11 +14,13 @@ namespace Sql.SemanticSearch.Core.ArXiv;
 public class IngestionService(
     IArxivApiClient arxivApiClient,
     IDatabaseConnection databaseConnection,
+    ResiliencePipelineProvider<string> resiliencePipelineProvider,
     AISettings aiSettings,
     ILogger<IngestionService> logger) : IIngestionService
 {
     private readonly IArxivApiClient _arxivApiClient = arxivApiClient;
     private readonly IDatabaseConnection _databaseConnection = databaseConnection;
+    private readonly ResiliencePipelineProvider<string> _resiliencePipelineProvider = resiliencePipelineProvider;
     private readonly AISettings _aiSettings = aiSettings;
     private readonly ILogger<IngestionService> _logger = logger;
 
@@ -45,7 +49,7 @@ public class IngestionService(
 
                 try
                 {
-                    await Save(paper);
+                    await Save(paper, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -59,19 +63,25 @@ public class IngestionService(
         }
     }
 
-    private async Task Save(ArxivPaper paper)
+    private async Task Save(ArxivPaper paper, CancellationToken cancellationToken)
     {
-        using var connection = _databaseConnection.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
+        var resiliencePipeline = _resiliencePipelineProvider.GetPipeline(ResiliencePipelineNames.SqlServerRetry);
+        await resiliencePipeline.ExecuteAsync(
+            async context =>
+            {
+                using var connection = _databaseConnection.CreateConnection();
+                connection.Open();
+                using var transaction = connection.BeginTransaction();
 
-        await DeleteExistingDocumentIfExists(paper.Id, transaction);
+                await DeleteExistingDocumentIfExists(paper.Id, transaction);
 
-        var documentId = await SaveDocument(paper, transaction);
-        await SaveDocumentSummaryEmbeddings(documentId, transaction);
-        await SaveDocumentMetadataEmbeddings(documentId, transaction);
+                var documentId = await SaveDocument(paper, transaction);
+                await SaveDocumentSummaryEmbeddings(documentId, transaction);
+                await SaveDocumentMetadataEmbeddings(documentId, transaction);
 
-        transaction.Commit();
+                transaction.Commit();
+            },
+           cancellationToken);
     }
 
     private async Task<int> DeleteExistingDocumentIfExists(string arxivId, System.Data.IDbTransaction transaction) =>

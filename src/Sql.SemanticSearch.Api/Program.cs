@@ -17,8 +17,10 @@ var aiSettings = builder.Configuration.GetAISettings();
 
 if (string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddOllamaResilienceHandler();
+    builder.AddOllamaResilienceHandler();
 }
+
+builder.AddSqlServerResiliencePipeline();
 
 builder.Services.AddOpenApi();
 

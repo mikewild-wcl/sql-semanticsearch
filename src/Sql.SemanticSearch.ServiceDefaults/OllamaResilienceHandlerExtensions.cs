@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Sql.SemanticSearch.ServiceDefaults;
@@ -7,11 +8,11 @@ namespace Sql.SemanticSearch.ServiceDefaults;
 [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "This shared extension needs to be visible")]
 public static class OllamaResilienceHandlerExtensions
 {
-    extension(IServiceCollection services)
+    extension<TBuilder>(TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        public IServiceCollection AddOllamaResilienceHandler()
+        public TBuilder AddOllamaResilienceHandler()
         {
-            services.ConfigureHttpClientDefaults(http =>
+            builder.Services.ConfigureHttpClientDefaults(http =>
             {
 #pragma warning disable EXTEXP0001 // RemoveAllResilienceHandlers is experimental
                 http.RemoveAllResilienceHandlers();
@@ -32,7 +33,7 @@ public static class OllamaResilienceHandlerExtensions
                 http.AddServiceDiscovery();
             });
 
-            return services;
+            return builder;
         }
     }
 }

@@ -117,3 +117,9 @@ The `/api/search` endpoint accepts a POST request with a query and returns the t
 Scalar has been added to the AppHost for OpenAPI documentation - see [Scalar API Reference for .NET Aspire](https://scalar.com/products/api-references/integrations/aspire).
 
 OpenAPI is enabled when running in development mode. Scalar can be used to test the API at `https://<uri>:<port>/scalar/v1`.
+
+# Resilience
+
+Polly is used for resilience. There is a resilience pipeline for SQL added by `ServiceDefaults.ResiliencePipelineExtensions.AddSqlServerResiliencePipeline`.
+
+For unit testing, an empty pipeline is used by default, as recommended in the Polly [Testing](https://github.com/App-vNext/Polly/blob/main/docs/advanced/testing.md/) documentation.

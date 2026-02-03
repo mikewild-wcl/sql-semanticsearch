@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Polly;
+using Polly.Registry;
 using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
@@ -13,15 +15,24 @@ public class IngestionServiceTests
 {
     private readonly IArxivApiClient _arxivApiClientSubstitute;
     private readonly IDatabaseConnection _databaseConnection;
+    private readonly ResiliencePipelineProvider<string> _resiliencePipelineProvider;
+
     private readonly IngestionService _sut;
 
     public IngestionServiceTests()
     {
         _arxivApiClientSubstitute = Substitute.For<IArxivApiClient>();
         _databaseConnection = Substitute.For<IDatabaseConnection>();
+
+        _resiliencePipelineProvider = Substitute.For<ResiliencePipelineProvider<string>>();
+        _resiliencePipelineProvider
+            .GetPipeline(Arg.Any<string>())
+            .Returns(ResiliencePipeline.Empty);
+
         _sut = new IngestionService(
             _arxivApiClientSubstitute,
             _databaseConnection,
+            _resiliencePipelineProvider,
             new AISettings("Ollama", "Test"),
             NullLogger<IngestionService>.Instance);
     }
@@ -33,7 +44,7 @@ public class IngestionServiceTests
         var request = new IndexingRequest { Ids = ["id1", "id2", "id3"] };
 
         // Act
-        await _sut.ProcessIndexingRequest(request);
+        await _sut.ProcessIndexingRequest(request, TestContext.Current.CancellationToken);
 
         // Assert
         await _arxivApiClientSubstitute.Received(1).GetPapers(
@@ -54,7 +65,7 @@ public class IngestionServiceTests
         var request = new IndexingRequest { Ids = ["single-id"] };
 
         // Act
-        await _sut.ProcessIndexingRequest(request);
+        await _sut.ProcessIndexingRequest(request, TestContext.Current.CancellationToken);
 
         // Assert
         await _arxivApiClientSubstitute.Received(1).GetPapers(
@@ -73,7 +84,7 @@ public class IngestionServiceTests
         var request = new IndexingRequest { Ids = [] };
 
         // Act
-        await _sut.ProcessIndexingRequest(request);
+        await _sut.ProcessIndexingRequest(request, TestContext.Current.CancellationToken);
 
         // Assert
         await _arxivApiClientSubstitute.Received(1).GetPapers(
@@ -91,7 +102,7 @@ public class IngestionServiceTests
 
         // Act & Assert
         var exception = await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await _sut.ProcessIndexingRequest(request!));
+            await _sut.ProcessIndexingRequest(request!, TestContext.Current.CancellationToken));
 
         exception.ParamName.ShouldBe("indexingRequest");
     }
