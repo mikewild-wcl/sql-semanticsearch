@@ -30,22 +30,20 @@ I then built up the application by adding projects and added those to the Aspire
 ## Aspire AppHost
 
 We'll need a few NuGet packages for Azure functions, SQL Server, Ollama, and DevTunnels - we'll need this last one so that SQL Server can talk to Ollama over https. I've also added Scalar so we can see the API details using OpenAPI.
-```
-Aspire.Hosting.Azure.Functions
-Aspire.Hosting.DevTunnels
-Aspire.Hosting.SqlServer
-CommunityToolkit.Aspire.Hosting.Ollama
-Scalar.Aspire
-```
+- Aspire.Hosting.Azure.Functions
+- Aspire.Hosting.DevTunnels
+- Aspire.Hosting.SqlServer
+- CommunityToolkit.Aspire.Hosting.Ollama
+- Scalar.Aspire
 
 The main projects are referenced from the AppHost project. Note the `AspireProjectMetadataTypeName` in the references that let us use a shorter name when using the project in code. Also note `IsAspireProjectResource="false"` for the Shared project - this is where the "magic strings" constants are defined.
 ```
-  <ItemGroup>
-    <ProjectReference Include="..\Sql.SemanticSearch.Api\Sql.SemanticSearch.Api.csproj" AspireProjectMetadataTypeName="Api" />
-    <ProjectReference Include="..\Sql.SemanticSearch.DatabaseDeployment\Sql.SemanticSearch.DatabaseDeployment.csproj" AspireProjectMetadataTypeName="DatabaseDeployment" />
-    <ProjectReference Include="..\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" AspireProjectMetadataTypeName="IngestionFunctions" />
-    <ProjectReference Include="..\Sql.SemanticSearch.Shared\Sql.SemanticSearch.Shared.csproj" IsAspireProjectResource="false" />
-  </ItemGroup>
+<ItemGroup>
+  <ProjectReference Include="..\Sql.SemanticSearch.Api\Sql.SemanticSearch.Api.csproj" AspireProjectMetadataTypeName="Api" />
+  <ProjectReference Include="..\Sql.SemanticSearch.DatabaseDeployment\Sql.SemanticSearch.DatabaseDeployment.csproj" AspireProjectMetadataTypeName="DatabaseDeployment" />
+  <ProjectReference Include="..\Sql.SemanticSearch.Ingestion.Functions\Sql.SemanticSearch.Ingestion.Functions.csproj" AspireProjectMetadataTypeName="IngestionFunctions" />
+  <ProjectReference Include="..\Sql.SemanticSearch.Shared\Sql.SemanticSearch.Shared.csproj" IsAspireProjectResource="false" />
+</ItemGroup>
 ```
   
 Parameters are defined in `appsettings.json` and can be overridden in user secrets:
@@ -191,8 +189,6 @@ I've only added Scalar for the API project because I couldn't get it working for
 
 The `Sql.SemanticSearch.DatabaseDeployment` project uses **DbUp** to deploy the database from scripts embedded into the assembly.
 
-Note for future changes: https://elanderson.net/2020/08/always-run-migrations-with-dbup/
-
 It sets up some variables for use in the scripts:
 ```
 Dictionary<string, string> variables = new()
@@ -277,7 +273,7 @@ The application runs with a dashboard that has the running resources with links:
 ![Application host running in a browser.](./images/aspire_screenshot.png)
 
 It also includes an interactive graph of the application:
-![Application graph.](./images/aspire_graph.png)
+![Aspire application graph.](./images/aspire_graph.png)
 
 ## Conclusion
 
