@@ -14,14 +14,10 @@ using System.Data;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
-
 var aiSettings = builder.Configuration.GetAISettings();
+var useOllamaDefaults = string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreCase);
 
-if (string.Equals(aiSettings.Provider, "OLLAMA", StringComparison.OrdinalIgnoreCase))
-{
-    builder.AddOllamaResilienceHandler();
-}
+builder.AddServiceDefaults(useOllamaDefaults);
 
 builder.AddSqlServerResiliencePipeline();
 

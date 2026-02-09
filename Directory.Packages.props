@@ -5,7 +5,7 @@
   <ItemGroup>
     <PackageVersion Include="Aspire.Microsoft.Data.SqlClient" Version="13.1.0" />
     <PackageVersion Include="Dapper" Version="2.1.66" />
-    <PackageVersion Include="Microsoft.ApplicationInsights.WorkerService" Version="2.23.0" />
+    <PackageVersion Include="Microsoft.ApplicationInsights.WorkerService" Version="3.0.0" />
     <PackageVersion Include="Aspire.Hosting.Azure.Functions" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.DevTunnels" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.1.0" />
@@ -36,7 +36,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
     <!--<PackageVersion Include="Scalar.AspNetCore" Version="2.11.5" />-->
-    <PackageVersion Include="Scalar.Aspire" Version="0.8.39" />
+    <PackageVersion Include="Scalar.Aspire" Version="0.8.45" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.19.0.132793" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

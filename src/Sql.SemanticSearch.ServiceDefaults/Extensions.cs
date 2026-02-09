@@ -17,7 +17,7 @@ public static class Extensions
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
 
-    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder, bool useOllamaResilienceTimeouts = false) where TBuilder : IHostApplicationBuilder
     {
         builder.ConfigureOpenTelemetry();
 
@@ -28,7 +28,22 @@ public static class Extensions
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
             // Turn on resilience by default
-            http.AddStandardResilienceHandler();
+            if (useOllamaResilienceTimeouts)
+            {
+                http.AddStandardResilienceHandler(config =>
+                {
+                    // Extend the HTTP Client timeout for Ollama
+                    config.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+
+                    // Must be at least double the AttemptTimeout to pass options validation
+                    config.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
+                    config.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(10);
+                });
+            }
+            else
+            {
+                http.AddStandardResilienceHandler();
+            }
 
             // Turn on service discovery by default
             http.AddServiceDiscovery();

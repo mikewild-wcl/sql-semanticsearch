@@ -65,15 +65,15 @@ var result = DeployChanges.To
 if (result.Successful)
 {
     result = DeployChanges.To
-    .SqlDatabase(connectionString)
-    .WithVariables(variables)
-    .WithScriptsEmbeddedInAssembly(
-            typeof(Program).Assembly,
-            f => !f.Contains(AlwaysRunTag, StringComparison.InvariantCultureIgnoreCase))
-    .WithTransaction()
-    .AddLoggerFromServiceProvider(serviceProvider)
-    .Build()
-    .PerformUpgrade();
+        .SqlDatabase(connectionString)
+        .WithVariables(variables)
+        .WithScriptsEmbeddedInAssembly(
+                typeof(Program).Assembly,
+                f => !f.Contains(AlwaysRunTag, StringComparison.InvariantCultureIgnoreCase))
+        .WithTransaction()
+        .AddLoggerFromServiceProvider(serviceProvider)
+        .Build()
+        .PerformUpgrade();
 }
 
 if (result.Successful)

@@ -261,15 +261,12 @@ I added `Scalar.Aspire` to the AppHost. Scalar provides a front end for OpenAPI 
 
 ## Conclusion
 
-### Source code
-[!NOTE] 
-> Source code is available on [GitHub](https://github.com/mikewild-wcl/sql-semanticsearch)
+Aspire takes care of all dependencies and makes this easy to run.
 
+A developer can clone the repository and start running the project almost immediately. They might want to update the `secrets.json` file with their choice of ports and passwords, but they should be able to just start running it.
+It's almost completely local-development-first - the only thing that needs to use the internet is the functions call to arXiv; you could add another project that acts as a local server to serve test/dummy arXiv data but decided not to bother for now.
 
-## TO DO?
-
-Last time I mentioned that we aren't completely local-first because the functions call an exteral API to get metadata and (in future) download files. We can work around this by setting up a local test fake version of the API. I'm not going to do this for now.
-
+I haven't gone into cloud deployment in this article, but Aspire can help with that as well - it has a path to deploy directly to Azure or create CI/CD pipelines for provisioning and deployment. I might look at that in a future article.
 
 ### Source code
 [!NOTE] 
