@@ -12,7 +12,7 @@ internal class MetadataTypeHandler : SqlMapper.TypeHandler<DocumentMetadata>
     {
         parameter.DbType = DbType.String;
         parameter.Value = value is not null 
-            ? JsonSerializer.Serialize(value, SerializerOptions.CamelCaseSerialierOptions) 
+            ? JsonSerializer.Serialize(value, SerializerOptions.CamelCaseSerializerOptions) 
             : DBNull.Value;
     }
 
@@ -20,7 +20,7 @@ internal class MetadataTypeHandler : SqlMapper.TypeHandler<DocumentMetadata>
     {
         var json = value as string;
         var result = !string.IsNullOrWhiteSpace(json)
-            ? JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerialierOptions)
+            ? JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions)
             : null;
         return result ?? new();
     }

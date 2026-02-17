@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <!--<PackageReference Include="Scalar.AspNetCore" />-->
     <PackageReference Include="Aspire.Microsoft.Data.SqlClient" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>
