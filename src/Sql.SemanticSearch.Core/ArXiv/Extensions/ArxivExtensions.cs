@@ -50,7 +50,7 @@ internal static partial class ArxivExtensions
                 paper.Authors,
                 paper.Categories
             },
-            SerializerOptions.CamelCaseSerialierOptions);
+            SerializerOptions.CamelCaseSerializerOptions);
     }
 }
 

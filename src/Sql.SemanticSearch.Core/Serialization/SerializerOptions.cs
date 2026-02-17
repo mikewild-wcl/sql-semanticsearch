@@ -2,10 +2,16 @@
 
 namespace Sql.SemanticSearch.Core.Serialization;
 
-internal static class SerializerOptions
+public static class SerializerOptions
 {
-    public static readonly JsonSerializerOptions CamelCaseSerialierOptions = new()
+    public static readonly JsonSerializerOptions CamelCaseSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    public static readonly JsonSerializerOptions DefaultWebSerializerOptions =
+        new(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = true
+        };
 }

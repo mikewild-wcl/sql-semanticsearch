@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Sql.SemanticSearch.Api.Endpoints;
+using Sql.SemanticSearch.Api.Mcp;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
@@ -29,6 +30,11 @@ builder.Services
     .AddTransient<IDatabaseConnection, DapperConnection>()
     .AddTransient<ISearchService, SearchService>();
 
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<SearchTools>();
+
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
@@ -43,5 +49,6 @@ app.UseHttpsRedirection();
 
 app.MapSearchEndpoints();
 
+app.MapMcp();
 
 await app.RunAsync().ConfigureAwait(true);

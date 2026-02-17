@@ -118,7 +118,22 @@ Scalar has been added to the AppHost for OpenAPI documentation - see [Scalar API
 
 OpenAPI is enabled when running in development mode. Scalar can be used to test the API at `https://<uri>:<port>/scalar/v1`.
 
-# Resilience
+## MCP Server
+
+The API project exposes a Model Context Protocol (MCP) server at the `/mcp` endpoint. This allows MCP-compatible clients to connect and use the semantic search capabilities of the API.
+
+Example MCP client config (e.g., mcp.json for VS Code):
+```
+{
+  "servers": {
+    "sql-semantic-search": {
+      "url": "https://localhost:7253/mcp"
+    }
+  }
+}
+```
+
+## Resilience
 
 Polly is used for resilience. There is a resilience pipeline for SQL added by `ServiceDefaults.ResiliencePipelineExtensions.AddSqlServerResiliencePipeline`.
 

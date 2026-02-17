@@ -36,7 +36,7 @@ public class MetadataTypeHandlerTests
             Categories = ["cs.CL", "stat.ML"]
         };
 
-        var expectedJson = JsonSerializer.Serialize(metadata, SerializerOptions.CamelCaseSerialierOptions);
+        var expectedJson = JsonSerializer.Serialize(metadata, SerializerOptions.CamelCaseSerializerOptions);
 
         // Act
         sut.SetValue(parameter, metadata);
@@ -60,13 +60,13 @@ public class MetadataTypeHandlerTests
             }
             """;
 
-        var j1 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerialierOptions);
+        var j1 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions);
 
         json = """{"authors":["Alice","Bob"],"categories":["cs.CL","stat.ML"]}""";
-        var j2 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerialierOptions);
+        var j2 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions);
 
         json = """{"authors":["Alice","Bob"],"categories":["cs.CL","stat.ML"]}""";
-        var j3 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerialierOptions);
+        var j3 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions);
 
         // Act
         var result = sut.Parse(json);
