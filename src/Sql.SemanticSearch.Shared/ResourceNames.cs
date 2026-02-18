@@ -12,6 +12,6 @@ public static class ResourceNames
     public const string IngestionFunctions = "ingestion-functions";
 
     public const string SqlServer = "sql";
-    public const string SqlDatabase = "database";
+    public const string SqlDatabase = "sqldatabase";
     public const string SqlServerEndpoint = "sql-server";
 }

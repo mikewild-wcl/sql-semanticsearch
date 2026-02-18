@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sql.SemanticSearch.Core.ArXiv;
 using Sql.SemanticSearch.Core.ArXiv.Interfaces;
+using Sql.SemanticSearch.Core.Chunking;
+using Sql.SemanticSearch.Core.Chunking.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
@@ -30,6 +32,7 @@ builder.Services.AddSingleton(new Func<IDbConnection>(() =>
 builder.Services
     .AddSingleton(aiSettings)
     .AddTransient<IDatabaseConnection, DapperConnection>()
+    .AddTransient<IDocumentChunkingService, DocumentChunkingService>()
     .AddTransient<IIngestionService, IngestionService>();
 
 builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>

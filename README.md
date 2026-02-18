@@ -108,7 +108,11 @@ This is added via an extension `WithGPUSupportIfVendorParameterProvided` and sho
 The ingestion function uses the [arXiv API](https://info.arxiv.org/help/api/index.html) to load document metadata and then to download documents.
 Thank you to arXiv for use of its open access interoperability.
 
-## API
+## Ingestion and Chunking
+
+See https://aka.ms/sqltrigger for details on how to use the SQL trigger binding.
+
+## Search API
 
 The API project is an ASP.NET Core minimal API for search queries. It uses `AI_GENERATE_EMBEDDINGS` to create an embedding for the search query, then compares it against stored embeddings using `VECTOR_DISTANCE` (cosine distance).
 

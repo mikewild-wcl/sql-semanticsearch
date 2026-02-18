@@ -6,6 +6,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="sql\00-server-configuration-enable-preview-features.sql" />
+    <EmbeddedResource Include="sql\01-server-configuration-enable-database-change-tracking.sql" />
+    <EmbeddedResource Include="sql\05-tables-for-document-chunks.sql" />
+    <EmbeddedResource Include="sql\06-enable-table-change-tracking.sql" />
     <EmbeddedResource Include="sql\01-server-configuration.sql" />
     <EmbeddedResource Include="sql\02-schemas.sql" />
     <EmbeddedResource Include="sql\03-security.sql" />
