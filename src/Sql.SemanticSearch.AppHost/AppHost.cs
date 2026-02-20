@@ -9,10 +9,12 @@ var aiProviderParameter = builder.AddParameter(ParameterNames.AIProvider);
 var embeddingModelParameter = builder.AddParameter(ParameterNames.EmbeddingModel);
 var embeddingDimensionsParameter = builder.AddParameter(ParameterNames.EmbeddingDimensions);
 var sqlServerExternalEmbeddingModelParameter = builder.AddParameter(ParameterNames.SqlServerExternalEmbeddingModel);
-var gpuVendorParameter = builder.AddParameter(ParameterNames.GpuVendor, value: new BooleanParameterDefault(false));
+var gpuVendorParameter = builder.AddParameter(ParameterNames.GpuVendor, value: new EmptyParameterDefault());
 
 var sqlServerPortParameter = builder.AddParameter(ParameterNames.SqlServerPort, value: new EmptyParameterDefault());
 var sqlPasswordParameter = builder.AddParameter(ParameterNames.SqlServerPassword, value: new EmptyParameterDefault(), secret: true);
+
+var useApiDevTunnelParameter = builder.AddParameter(ParameterNames.UseApiDevTunnel, value: new BooleanParameterDefault(false));
 
 var ollama = builder.AddOllama(ResourceNames.Ollama)
     .WithGPUSupportIfAvailable(gpuVendorParameter)
@@ -56,6 +58,14 @@ var api = builder.AddProject<Projects.Api>(ResourceNames.Api)
     .WithEnvironment(ParameterNames.EmbeddingDimensions, embeddingDimensionsParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
     .WaitForCompletion(databaseDeployment);
+
+if (useApiDevTunnelParameter.GetValue<bool>() == true)
+{
+    builder.AddDevTunnel(ResourceNames.ApiTunnel)
+       .WithReference(api)
+       .WithAnonymousAccess()
+       .WaitFor(api);
+}
 
 builder.AddScalarApiReference(options =>
 {

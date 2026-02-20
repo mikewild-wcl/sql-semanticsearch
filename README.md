@@ -137,6 +137,10 @@ Example MCP client config (e.g., mcp.json for VS Code):
 }
 ```
 
+## Dev tunnel for API and MCP server
+
+If you want to expose the API and MCP server to external clients, you can use a dev tunnel by setting the `UseApiDevTunnel` parameter to `true`.
+
 ## Resilience
 
 Polly is used for resilience. There is a resilience pipeline for SQL added by `ServiceDefaults.ResiliencePipelineExtensions.AddSqlServerResiliencePipeline`.

@@ -15,4 +15,6 @@ public static class ParameterNames
     public const string SqlServerPassword = "SqlServerPassword";
     
     public const string GpuVendor = "OllamaGpuVendor";
+
+    public const string UseApiDevTunnel = "UseApiDevTunnel";
 }
