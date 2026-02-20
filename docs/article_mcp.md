@@ -26,6 +26,13 @@ How it works
   }
 }
 ```
+
+I have added `SearchTools` to the API project, which implements the `ITool` interface from the MCP library. This tool is responsible for handling search requests from MCP clients, executing the search logic using the existing `ISearchService`, and returning results in a format that MCP clients can understand.
+
+The tool returns results in a structured format that includes the document title, a snippet of the content, and a relevance score. This allows MCP clients to display search results in a user-friendly way.
+
+I have also added `SearchPrompts` which contains the prompt templates for the `SearchTool`. These prompts are used to generate the appropriate queries for the database based on the user's search input.
+
  
 ### Source code
 [!NOTE] 

@@ -7,15 +7,14 @@ WARNING: This removes everything! If you just want to remove document data use t
 DELETE dbo.DocumentSummaryEmbeddings
 --DELETE dbo.DocumentCommentEmbeddings
 DELETE dbo.DocumentMetadataEmbeddings
---DELETE dbo.DocumentChunkEmbeddings
---DELETE dbo.DocumentChunks
+DELETE dbo.DocumentChunkEmbeddings
+DELETE dbo.DocumentChunks
 DELETE dbo.Documents
 
 */
 
 IF EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'Documents')
 	DROP INDEX IF EXISTS IX_Documents_Metadata ON dbo.Documents;
-
 IF EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'DocumentChunks')
 	ALTER TABLE dbo.DocumentChunks DROP CONSTRAINT IF EXISTS FK_DocumentChunks_Documents
 IF EXISTS (SELECT * FROM sys.tables t INNER JOIN sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name = 'dbo' AND t.name = 'DocumentSummaryEmbeddings')

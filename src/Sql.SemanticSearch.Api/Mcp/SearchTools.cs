@@ -11,7 +11,7 @@ public sealed class SearchTools(ISearchService searchService)
 {
     private readonly ISearchService _searchService = searchService;
 
-    [McpServerTool(Name = "semantic_search", UseStructuredContent = true)]
+    [McpServerTool(Name = McpConstants.SemanticSearchTool, UseStructuredContent = true)]
     [Description("Search for academic papers and documents using semantic similarity. Returns a structured list of the most relevant documents matching the query.")]
     public async Task<List<SearchToolResponseItem>> SearchDocuments(
         [Description("The natural language search query to find relevant documents.")] string query,

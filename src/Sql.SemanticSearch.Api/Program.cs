@@ -33,7 +33,8 @@ builder.Services
 builder.Services
     .AddMcpServer()
     .WithHttpTransport()
-    .WithTools<SearchTools>();
+    .WithTools<SearchTools>()
+    .WithPrompts<SearchPrompts>();
 
 var app = builder.Build();
 
