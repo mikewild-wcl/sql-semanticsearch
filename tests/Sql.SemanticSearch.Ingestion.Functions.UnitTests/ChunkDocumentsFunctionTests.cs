@@ -53,15 +53,17 @@ public class ChunkDocumentsFunctionTests
             Arg.Is<DatabaseDocument>(d => 
                 d.Id == 1 &&
                 d.ArxivId == "2301.00001" &&
-                d.Title == "Deep Learning Fundamentals"));
+                d.Title == "Deep Learning Fundamentals"),
+            Arg.Any<CancellationToken>());
 
         await _chunkingServiceSubstitute.Received(1).IndexDocument(
             Arg.Is<DatabaseDocument>(d =>
                 d.Id == 2 &&
                 d.ArxivId == "2302.00002" &&
-                d.Title == "Neural Networks and AI"));
+                d.Title == "Neural Networks and AI"),
+            Arg.Any<CancellationToken>());
 
-        await _chunkingServiceSubstitute.Received(2).IndexDocument(Arg.Any<DatabaseDocument>());
+        await _chunkingServiceSubstitute.Received(2).IndexDocument(Arg.Any<DatabaseDocument>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -88,7 +90,8 @@ public class ChunkDocumentsFunctionTests
         await _chunkingServiceSubstitute.Received(1).IndexDocument(
             Arg.Is<DatabaseDocument>(d =>
                 d.Id == 1 &&
-                d.Title == "Test Paper"));
+                d.Title == "Test Paper"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -98,7 +101,7 @@ public class ChunkDocumentsFunctionTests
         await _sut.Run(null!, TestContext.Current.CancellationToken);
 
         // Assert
-        await _chunkingServiceSubstitute.DidNotReceive().IndexDocument(Arg.Any<DatabaseDocument>());
+        await _chunkingServiceSubstitute.DidNotReceive().IndexDocument(Arg.Any<DatabaseDocument>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -111,7 +114,7 @@ public class ChunkDocumentsFunctionTests
         await _sut.Run(changes, TestContext.Current.CancellationToken);
 
         // Assert
-        await _chunkingServiceSubstitute.DidNotReceive().IndexDocument(Arg.Any<DatabaseDocument>());
+        await _chunkingServiceSubstitute.DidNotReceive().IndexDocument(Arg.Any<DatabaseDocument>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -137,7 +140,7 @@ public class ChunkDocumentsFunctionTests
         DatabaseDocument? capturedDocument = null;
 
         _chunkingServiceSubstitute
-            .IndexDocument(Arg.Any<DatabaseDocument>())
+            .IndexDocument(Arg.Any<DatabaseDocument>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 capturedDocument = _.Arg<DatabaseDocument>();
@@ -180,12 +183,13 @@ public class ChunkDocumentsFunctionTests
         await _sut.Run(changes, TestContext.Current.CancellationToken);
 
         // Assert
-        await _chunkingServiceSubstitute.Received(5).IndexDocument(Arg.Any<DatabaseDocument>());
+        await _chunkingServiceSubstitute.Received(5).IndexDocument(Arg.Any<DatabaseDocument>(), Arg.Any<CancellationToken>());
 
         for (int i = 1; i <= 5; i++)
         {
             await _chunkingServiceSubstitute.Received(1).IndexDocument(
-                Arg.Is<DatabaseDocument>(d => d.Id == i));
+                Arg.Is<DatabaseDocument>(d => d.Id == i),
+                Arg.Any<CancellationToken>());
         }
     }
 
@@ -207,7 +211,7 @@ public class ChunkDocumentsFunctionTests
 
         var exception = new InvalidOperationException("Chunking service error");
         _chunkingServiceSubstitute
-            .IndexDocument(Arg.Any<DatabaseDocument>())
+            .IndexDocument(Arg.Any<DatabaseDocument>(), Arg.Any<CancellationToken>())
             .Throws(exception);
 
         // Act & Assert
@@ -240,8 +244,6 @@ public class ChunkDocumentsFunctionTests
         await _sut.Run(changes, cancellationToken);
 
         // Assert
-        // Verify the service was called (we can't directly verify the token passed to async method,
-        // but we can verify the call completed with our cancellation token)
-        await _chunkingServiceSubstitute.Received(1).IndexDocument(Arg.Any<DatabaseDocument>());
+        await _chunkingServiceSubstitute.Received(1).IndexDocument(Arg.Any<DatabaseDocument>(), cancellationToken);
     }
 }

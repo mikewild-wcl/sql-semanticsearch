@@ -39,7 +39,7 @@ public class ChunkDocumentsFunction(
                 continue; /* No action - Assume that deleting documents will have also deleted chunks. */
             }
 
-            await _chunkingService.IndexDocument(document);
+            await _chunkingService.IndexDocument(document, cancellationToken);
         }
     }
 }
