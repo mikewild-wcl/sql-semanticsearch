@@ -34,6 +34,11 @@ public class ChunkDocumentsFunction(
             var document = change.Item;
             _logSqlChangeReceived(_logger, change.Operation, document.Id, document.Title, document.PdfUri, null);
 
+            if(change.Operation == SqlChangeOperation.Delete)
+            {
+                continue; /* No action - Assume that deleting documents will have also deleted chunks. */
+            }
+
             await _chunkingService.IndexDocument(document);
         }
     }

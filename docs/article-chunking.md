@@ -32,13 +32,13 @@ Other options include:
 - Change Data Capture - another SQL Server technology that lets us monitor for table changes. In SQL Server 2025 Microsoft would prefer us to use the next one.
 - The new Change Event Stream captures changes and sends them to Azure Event Hubs, so we could use an Event Hubs trigger for the function.
 
-- ### SQL Traggered function
+- ### SQL Triggered function
 
 - Add a new function with a SQL Trigger. I've added this to the Ingestions function project, but in production I'd probably create a separate function app for it. 
 
 See https://aka.ms/sqltrigger for details on how to use the SQL trigger binding.
 
- 
+
 ### Source code
 [!NOTE] 
 > Source code is available on [GitHub](https://github.com/mikewild-wcl/sql-semanticsearch)

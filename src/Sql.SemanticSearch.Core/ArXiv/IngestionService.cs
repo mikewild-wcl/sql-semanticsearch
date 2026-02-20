@@ -93,6 +93,17 @@ public class IngestionService(
             DELETE FROM DocumentMetadataEmbeddings
             WHERE [Id] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
 
+            DELETE FROM dbo.DocumentChunkEmbeddings
+            WHERE [Id] IN (
+                SELECT dc.[Id]
+                FROM dbo.DocumentChunks dc
+                INNER JOIN dbo.Documents d ON dc.[DocumentId] = d.[Id]
+                WHERE d.[ArxivId] = @ArxivId
+            );
+
+            DELETE FROM DocumentChunks
+            WHERE [DocumentId] IN (SELECT [Id] FROM Documents WHERE [ArxivId] = @ArxivId);
+            
             DELETE FROM dbo.Documents
             WHERE [ArxivId] = @ArxivId;            
             """,
