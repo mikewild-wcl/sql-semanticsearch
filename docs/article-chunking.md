@@ -27,7 +27,6 @@ WITH (TRACK_COLUMNS_UPDATED = ON)
 
 Note that the ALTER DATABASE statement isn't allowed within a multi-statement transaction, so the above statements have been split into two files in the DatabaseDeployment project, and the ALTER DATABASE file has "server-configuration" added so the deployment knows not to use a transaction.
 
-
 Other options include:
 - Change Data Capture - another SQL Server technology that lets us monitor for table changes. In SQL Server 2025 Microsoft would prefer us to use the next one.
 - The new Change Event Stream captures changes and sends them to Azure Event Hubs, so we could use an Event Hubs trigger for the function.
@@ -38,6 +37,22 @@ Other options include:
 
 See https://aka.ms/sqltrigger for details on how to use the SQL trigger binding.
 
+### Data ingestion library
+
+The code uses the new Microsoft Data Ingestion Building Blocks
+
+### Documant readers
+
+The document extraction uses Markitdown MCP Server. This is added in AppHost:
+```
+var markitdown = builder.AddContainer("markitdown", "mcp/markitdown")
+    .WithArgs("--http", "--host", "0.0.0.0", "--port", "3001")
+    .WithHttpEndpoint(targetPort: 3001, name: "http");
+```
+The uri is added to the ingestion functions as an environment variable:
+```
+    .WithEnvironment(EnvironmentVariableNames.MarkitdownMcpUri, markitdown.GetEndpoint("http"))
+```
 
 ### Source code
 [!NOTE] 
@@ -46,3 +61,5 @@ See https://aka.ms/sqltrigger for details on how to use the SQL trigger binding.
 ## References
 
 - [Database and AI: solutions for keeping embeddings updated](https://devblogs.microsoft.com/azure-sql/database-and-ai-solutions-for-keeping-embeddings-updated/) talks about how to use an Azure Functions Sql Trigger binding
+- [Data ingestion](https://learn.microsoft.com/en-us/dotnet/ai/conceptual/data-ingestion)
+- [Introducing Data Ingestion Building Blocks (Preview)](https://devblogs.microsoft.com/dotnet/introducing-data-ingestion-building-blocks-preview/)

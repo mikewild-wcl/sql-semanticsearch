@@ -1,23 +1,26 @@
-﻿using System.Globalization;
-using Microsoft.Extensions.DataIngestion;
+﻿using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.Tokenizers;
+using Polly.Registry;
 using Sql.SemanticSearch.Core.ArXiv.Exceptions;
-using Sql.SemanticSearch.Core.ArXiv.Interfaces;
 using Sql.SemanticSearch.Core.Chunking.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
+using Sql.SemanticSearch.Shared;
+using System.Globalization;
 
 namespace Sql.SemanticSearch.Core.Chunking;
 
 public class DocumentChunkingService(
-    IArxivApiClient arxivApiClient,
     IDatabaseConnection databaseConnection,
+    IDocumentReader reader,
+    ResiliencePipelineProvider<string> resiliencePipelineProvider,
     AISettings aiSettings,
     ILogger<DocumentChunkingService> logger) : IDocumentChunkingService
 {
-    private readonly IArxivApiClient _arxivApiClient = arxivApiClient;
     private readonly IDatabaseConnection _databaseConnection = databaseConnection;
+    private readonly IDocumentReader _reader = reader;
+    private readonly ResiliencePipelineProvider<string> _resiliencePipelineProvider = resiliencePipelineProvider;
     private readonly AISettings _aiSettings = aiSettings;
     private readonly ILogger<DocumentChunkingService> _logger = logger;
 
@@ -25,7 +28,7 @@ public class DocumentChunkingService(
     private readonly HeaderChunker _chunker = CreateChunker();
 
     // MarkItDownReader is stateless (shells out to the markitdown CLI); safe to share.
-    private static readonly MarkItDownReader _reader = new();
+    //private static readonly MarkItDownReader _reader = new();
 
     private static readonly Action<ILogger, int, int, Exception?> _logChunkSaved =
         LoggerMessage.Define<int, int>(
@@ -37,26 +40,23 @@ public class DocumentChunkingService(
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        await DeleteExistingChunks(document.Id);
+        await DeleteExistingChunks(document.Id, cancellationToken);
 
         var ingestionDocument = await LoadIngestionDocumentAsync(document, cancellationToken);
         await foreach (var chunk in _chunker.ProcessAsync(ingestionDocument, cancellationToken))
         {
-            var chunkId = await SaveDocumentChunk(document.Id, chunk.Content);
-            await SaveDocumentChunkEmbedding(chunkId);
-            _logChunkSaved(_logger, chunkId, document.Id, null);
+            await WriteDocumentChunk(document.Id, chunk.Content, cancellationToken);
         }
     }
 
     private async Task<IngestionDocument> LoadIngestionDocumentAsync(DatabaseDocument document, CancellationToken cancellationToken)
     {
-        if (!Uri.TryCreate(document.PdfUri, UriKind.Absolute, out var pdfUri))
+        if (!Uri.TryCreate(document.PdfUri, UriKind.Absolute, out var uri))
         {
             throw new ArxivPdfDownloadException($"Cannot download PDF for document {document.Id}: invalid or missing URI.");
         }
 
-        using var pdfStream = await _arxivApiClient.DownloadPdfToMemoryStream(pdfUri, cancellationToken);
-        return await _reader.ReadAsync(pdfStream, document.ArxivId ?? document.Id.ToString(CultureInfo.InvariantCulture), "application/pdf", cancellationToken);
+        return await _reader.Read(uri, document.ArxivId, default, cancellationToken: cancellationToken);
     }
 
     private static HeaderChunker CreateChunker()
@@ -69,7 +69,18 @@ public class DocumentChunkingService(
         });
     }
 
-    private async Task DeleteExistingChunks(int documentId) =>
+    private async Task DeleteExistingChunks(int documentId, CancellationToken cancellationToken)
+    {
+        var resiliencePipeline = _resiliencePipelineProvider.GetPipeline(ResiliencePipelineNames.SqlServerRetry);
+        await resiliencePipeline.ExecuteAsync(
+            async context =>
+            {
+                await DeleteChunks(documentId, cancellationToken);
+            },
+            cancellationToken);
+    }
+
+    private async Task DeleteChunks(int documentId, CancellationToken cancellationToken) =>
         await _databaseConnection.ExecuteAsync(
             """
             DELETE FROM dbo.DocumentChunkEmbeddings
@@ -80,7 +91,31 @@ public class DocumentChunkingService(
             """,
             new { DocumentId = documentId });
 
-    private async Task<int> SaveDocumentChunk(int documentId, string content) =>
+
+    private async Task WriteDocumentChunk(int documentId, string content, CancellationToken cancellationToken)
+    {
+        var resiliencePipeline = _resiliencePipelineProvider.GetPipeline(ResiliencePipelineNames.SqlServerRetry);
+        await resiliencePipeline.ExecuteAsync(
+            async context =>
+            {
+                using var connection = _databaseConnection.CreateConnection();
+                connection.Open();
+                using var transaction = connection.BeginTransaction();
+
+                //await DeleteExistingDocumentIfExists(paper.Id, transaction);
+
+                var chunkId = await SaveDocumentChunk(documentId, content, transaction);
+                await SaveDocumentChunkEmbedding(chunkId, transaction);
+                _logChunkSaved(_logger, chunkId, documentId, null);
+
+                transaction.Commit();
+            },
+           cancellationToken);
+
+    }
+
+
+    private async Task<int> SaveDocumentChunk(int documentId, string content, System.Data.IDbTransaction transaction) =>
         await _databaseConnection.ExecuteScalarAsync<int>(
             """
             INSERT INTO dbo.DocumentChunks ([DocumentId], [Content])
@@ -88,10 +123,11 @@ public class DocumentChunkingService(
 
             SELECT CAST(SCOPE_IDENTITY() as int);
             """,
-            new { DocumentId = documentId, Content = content });
+            new { DocumentId = documentId, Content = content },
+            transaction: transaction);
 
     /* Note: Embedding model is *NOT* a SQL injection risk, it must be hard-coded so we have to use the settings value. */
-    private async Task SaveDocumentChunkEmbedding(int chunkId) =>
+    private async Task SaveDocumentChunkEmbedding(int chunkId, System.Data.IDbTransaction transaction) =>
         await _databaseConnection.ExecuteAsync(
             $"""
             INSERT INTO dbo.DocumentChunkEmbeddings ([Id], [Embedding])
@@ -99,5 +135,6 @@ public class DocumentChunkingService(
             FROM dbo.DocumentChunks
             WHERE [Id] = @Id;
             """,
-            new { Id = chunkId });
+            new { Id = chunkId },
+            transaction: transaction);
 }

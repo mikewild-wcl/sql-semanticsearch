@@ -60,14 +60,6 @@ public class MetadataTypeHandlerTests
             }
             """;
 
-        var j1 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions);
-
-        json = """{"authors":["Alice","Bob"],"categories":["cs.CL","stat.ML"]}""";
-        var j2 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions);
-
-        json = """{"authors":["Alice","Bob"],"categories":["cs.CL","stat.ML"]}""";
-        var j3 = JsonSerializer.Deserialize<DocumentMetadata>(json, SerializerOptions.CamelCaseSerializerOptions);
-
         // Act
         var result = sut.Parse(json);
 

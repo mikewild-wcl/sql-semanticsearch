@@ -5,6 +5,7 @@
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.DataIngestion" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion.Markdig" />
     <PackageReference Include="Microsoft.Extensions.DataIngestion.MarkItDown" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Resilience" />

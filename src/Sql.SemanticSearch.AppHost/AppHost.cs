@@ -46,10 +46,15 @@ var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(Resourc
     .WaitFor(devTunnel)
     .WaitFor(sqlServer);
 
+var markitdown = builder.AddContainer("markitdown", "mcp/markitdown")
+    .WithArgs("--http", "--host", "0.0.0.0", "--port", "3001")
+    .WithHttpEndpoint(targetPort: 3001, name: "http");
+
 builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.IngestionFunctions)
     .WithReference(sqlServer)
     .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
+    .WithEnvironment(EnvironmentVariableNames.MarkitdownMcpUri, markitdown.GetEndpoint("http"))
     .WaitForCompletion(databaseDeployment);
 
 var api = builder.AddProject<Projects.Api>(ResourceNames.Api)
