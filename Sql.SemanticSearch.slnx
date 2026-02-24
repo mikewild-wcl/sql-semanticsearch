@@ -15,6 +15,7 @@
     <Project Path="tests/Sql.SemanticSearch.Ingestion.Functions.UnitTests/Sql.SemanticSearch.Ingestion.Functions.UnitTests.csproj" />
     <Project Path="tests/Sql.SemanticSearch.Tests.Helpers/Sql.SemanticSearch.Tests.Helpers.csproj" Id="6e28072c-969e-478f-8223-0a74e9f48e31" />
   </Folder>
+  <Project Path="src/Microsoft.Extensions.DataIngestion.MarkItDown/Microsoft.Extensions.DataIngestion.MarkItDown.csproj" />
   <Project Path="src/Sql.SemanticSearch.Api/Sql.SemanticSearch.Api.csproj" />
   <Project Path="src/Sql.SemanticSearch.Core/Sql.SemanticSearch.Core.csproj" />
   <Project Path="src/Sql.SemanticSearch.DatabaseDeployment/Sql.SemanticSearch.DatabaseDeployment.csproj" Id="f474f503-a06d-4dad-a819-955c28875b5f" />

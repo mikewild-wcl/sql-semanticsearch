@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Extensions.DataIngestion.MarkItDown\Microsoft.Extensions.DataIngestion.MarkItDown.csproj" />
     <ProjectReference Include="..\Sql.SemanticSearch.Core\Sql.SemanticSearch.Core.csproj" />
     <ProjectReference Include="..\Sql.SemanticSearch.ServiceDefaults\Sql.SemanticSearch.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Sql.SemanticSearch.Shared\Sql.SemanticSearch.Shared.csproj" />
