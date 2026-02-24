@@ -28,6 +28,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.3.0-preview.1.26109.11" />
+    <PackageVersion Include="PdfPig" Version="0.1.13" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.Abstractions" Version="10.3.0-preview.1.26109.11" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.3.0-preview.1.26109.11" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.MarkItDown" Version="10.3.0-preview.1.26109.11" />

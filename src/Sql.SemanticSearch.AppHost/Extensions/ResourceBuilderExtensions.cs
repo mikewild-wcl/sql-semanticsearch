@@ -1,5 +1,4 @@
-﻿using Sql.SemanticSearch.AppHost.Extensions;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace Sql.SemanticSearch.AppHost.Extensions;
