@@ -200,6 +200,13 @@ internal static class MarkdownParser
         Debug.Assert(containerInline != null, "ContainerInline should not be null here.");
         Debug.Assert(containerInline!.FirstChild != null, "FirstChild should not be null here.");
 
+#pragma warning disable CA1508 // Avoid dead conditional code
+        //if (containerInline.FirstChild is null && containerInline.LastChild is null)
+        //{
+        //    return null; // No text content
+        //}
+#pragma warning restore CA1508 // Avoid dead conditional code
+
         if (ReferenceEquals(containerInline.FirstChild, containerInline.LastChild))
         {
             // If there is only one child, return its text.

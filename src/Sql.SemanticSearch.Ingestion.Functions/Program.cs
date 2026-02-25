@@ -54,7 +54,7 @@ builder.Services
     .AddSingleton(aiSettings)
     .AddTransient<IDatabaseConnection, DapperConnection>()
     .AddTransient<IDocumentChunkingService, DocumentChunkingService>()
-    
+    .AddTransient<IngestionChunkWriter<string>, SqlServerChunkWriter>()
     .AddTransient<IIngestionService, IngestionService>();
 
 builder.Services.AddHttpClient<IArxivApiClient, ArxivApiClient>(client =>
