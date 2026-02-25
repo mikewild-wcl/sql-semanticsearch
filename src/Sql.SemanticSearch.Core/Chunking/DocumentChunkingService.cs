@@ -7,7 +7,6 @@ using Sql.SemanticSearch.Core.Chunking.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data.Interfaces;
 using Sql.SemanticSearch.Shared;
-using System.Globalization;
 
 namespace Sql.SemanticSearch.Core.Chunking;
 
@@ -36,6 +35,12 @@ public class DocumentChunkingService(
             new EventId(0, nameof(DocumentChunkingService)),
             "Saved chunk {ChunkId} for document {DocumentId}.");
 
+    private static readonly Action<ILogger, int, Uri, Exception?> _logPdfDownloadFailed =
+        LoggerMessage.Define<int, Uri>(
+            LogLevel.Warning,
+            new EventId(1, nameof(DocumentChunkingService)),
+            "Failed to download PDF for document {DocumentId} from {Uri}. Falling back to PdfPig.");
+
     public async Task IndexDocument(DatabaseDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -56,7 +61,19 @@ public class DocumentChunkingService(
             throw new ArxivPdfDownloadException($"Cannot download PDF for document {document.Id}: invalid or missing URI.");
         }
 
-        return await _reader.Read(uri, document.ArxivId, default, cancellationToken: cancellationToken);
+        try
+        {
+            return await _reader.Read(uri, document.ArxivId, default, cancellationToken: cancellationToken);
+        }
+#pragma warning disable CA1031 // Intentional catch-all: any failure from MarkItDown should fall back to PdfPig
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            // fallback to PdfPig
+            _logPdfDownloadFailed(_logger, document.Id, uri, ex);
+
+            return await _reader.ReadWithPdfPig(uri, document.ArxivId, cancellationToken: cancellationToken);
+        }
     }
 
     private static HeaderChunker CreateChunker()
