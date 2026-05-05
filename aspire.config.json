@@ -1,0 +1,6 @@
+{
+  "appHost": {
+    "language": "csharp",
+    "path": "src/Sql.SemanticSearch.AppHost/Sql.SemanticSearch.AppHost.csproj"
+  }
+}

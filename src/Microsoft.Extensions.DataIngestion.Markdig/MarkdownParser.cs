@@ -200,13 +200,6 @@ internal static class MarkdownParser
         Debug.Assert(containerInline != null, "ContainerInline should not be null here.");
         Debug.Assert(containerInline!.FirstChild != null, "FirstChild should not be null here.");
 
-#pragma warning disable CA1508 // Avoid dead conditional code
-        //if (containerInline.FirstChild is null && containerInline.LastChild is null)
-        //{
-        //    return null; // No text content
-        //}
-#pragma warning restore CA1508 // Avoid dead conditional code
-
         if (ReferenceEquals(containerInline.FirstChild, containerInline.LastChild))
         {
             // If there is only one child, return its text.
@@ -229,15 +222,6 @@ internal static class MarkdownParser
             {
                 // EmphasisInline is also a ContainerInline, but it does not get any special treatment,
                 // as we use raw text here (instead of a markdown, where emphasis can be expressed).
-
-                // Mike - skip if there are no children, e.g. there is a single literal inline, which is very common for paragraphs and headers.
-                if(another.FirstChild is null && another.LastChild is null)
-                {
-                    var n = another.GetType().Name;
-                    Debug.WriteLine($"ContainerInline of type '{another.GetType().Name}' has no children, skipping.");
-                    //continue;
-                }
-
                 content.Append(GetText(another));
             }
             else if (inline is CodeInline codeInline)

@@ -8,5 +8,9 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet test:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "aspire"
+  ],
+  "enableAllProjectMcpServers": true
 }
