@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.Bcl.Memory" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.DataIngestion" />
