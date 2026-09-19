@@ -2,6 +2,7 @@ using Scalar.Aspire;
 using Sql.SemanticSearch.AppHost.Extensions;
 using Sql.SemanticSearch.AppHost.ParameterDefaults;
 using Sql.SemanticSearch.Shared;
+using System.Globalization;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -46,9 +47,15 @@ var databaseDeployment = builder.AddProject<Projects.DatabaseDeployment>(Resourc
     .WaitFor(devTunnel)
     .WaitFor(sqlServer);
 
-var markitdown = builder.AddContainer("markitdown", "mcp/markitdown")
-    .WithArgs("--http", "--host", "0.0.0.0", "--port", "3001")
-    .WithHttpEndpoint(targetPort: 3001, name: "http");
+var markitdownPort = PortHelpers.GetFreePort();
+var markitdown = builder.AddContainer(ResourceNames.MarkitDownMcp, "mcp/markitdown")
+    .WithArgs(
+        "--http",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        markitdownPort.ToString(CultureInfo.InvariantCulture))
+    .WithHttpEndpoint(targetPort: markitdownPort, name: ResourceNames.MarkitdownMcpEndpoint);
 
 builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.IngestionFunctions)
     .WithReference(sqlServer)

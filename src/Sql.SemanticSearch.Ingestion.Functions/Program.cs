@@ -11,6 +11,7 @@ using Sql.SemanticSearch.Core.Chunking.Interfaces;
 using Sql.SemanticSearch.Core.Configuration;
 using Sql.SemanticSearch.Core.Data;
 using Sql.SemanticSearch.Core.Data.Interfaces;
+using Sql.SemanticSearch.Core.Extensions;
 using Sql.SemanticSearch.ServiceDefaults;
 using Sql.SemanticSearch.Shared;
 using System.Data;
@@ -32,8 +33,7 @@ builder.Services.AddSingleton(new Func<IDbConnection>(() =>
 
 builder.Services.AddSingleton(_ =>
 {
-    var markItDownMcpUrl = $"{Environment.GetEnvironmentVariable(EnvironmentVariableNames.MarkitdownMcpUri)}/mcp";
-    var uri = new Uri(markItDownMcpUrl);
+    var uri = McpHelpers.GetMarkItDownMcpServerUrl();
     return new MarkItDownMcpReader(uri);
 });
 

@@ -13,6 +13,7 @@ public static class ResourceNames
     public const string OllamaTunnel = "ollama-api-tunnel";
 
     public const string MarkitDownMcp = "markitdown";
+    public const string MarkitdownMcpEndpoint = "markitdown-http";
 
     public const string DatabaseDeployment = "deploy-db";
 
