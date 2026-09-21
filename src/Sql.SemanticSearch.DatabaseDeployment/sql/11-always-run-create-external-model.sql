@@ -4,7 +4,9 @@ Always run this during deployment in case the model location has changed, which 
 
 DECLARE @aiProvider NVARCHAR(20) = '$AI_PROVIDER$'
 
-PRINT 'Creating external embedding model with provider=$AI_PROVIDER$, endpoint=$AI_CLIENT_ENDPOINT$, model=$EMBEDDING_MODEL$' 
+PRINT 'Creating external embedding model with provider=$AI_PROVIDER$, endpoint=$AI_CLIENT_ENDPOINT$, model=$EMBEDDING_MODEL$'
+PRINT 'NOTES: If the external model exists but has a different location or model name, it will be dropped then created with the new values.'
+PRINT '       If the external model already exists with the same name, location and model name, no changes will be made.'
 
 IF (@aiProvider = 'OLLAMA')
 BEGIN
@@ -19,12 +21,21 @@ BEGIN
         EXEC('DROP EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$')
     END
 
-    EXEC('CREATE EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$
-          WITH (
-            LOCATION = ''$AI_CLIENT_ENDPOINT$'',
-            API_FORMAT = ''OLLAMA'',
-            MODEL_TYPE = EMBEDDINGS,
-            MODEL = ''$EMBEDDING_MODEL$'')')
+    IF EXISTS (SELECT * FROM sys.external_models 
+               WHERE [Name] = '$EXTERNAL_EMBEDDING_MODEL$' )
+    BEGIN
+        PRINT 'External model $EXTERNAL_EMBEDDING_MODEL$ already exists'
+    END
+    ELSE BEGIN
+        EXEC('CREATE EXTERNAL MODEL $EXTERNAL_EMBEDDING_MODEL$
+              WITH (
+                LOCATION = ''$AI_CLIENT_ENDPOINT$'',
+                API_FORMAT = ''OLLAMA'',
+                MODEL_TYPE = EMBEDDINGS,
+                MODEL = ''$EMBEDDING_MODEL$'')')
+
+        PRINT 'Created external model $EXTERNAL_EMBEDDING_MODEL$'
+    END
 END
 ELSE IF (@aiProvider = 'AZUREOPENAI')
 BEGIN

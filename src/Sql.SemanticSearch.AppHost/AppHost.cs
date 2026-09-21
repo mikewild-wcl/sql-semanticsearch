@@ -61,7 +61,7 @@ builder.AddAzureFunctionsProject<Projects.IngestionFunctions>(ResourceNames.Inge
     .WithReference(sqlServer)
     .WithEnvironment(ParameterNames.AIProvider, aiProviderParameter)
     .WithEnvironment(ParameterNames.SqlServerExternalEmbeddingModel, sqlServerExternalEmbeddingModelParameter)
-    .WithEnvironment(EnvironmentVariableNames.MarkitdownMcpUri, markitdown.GetEndpoint("http"))
+    .WithEnvironment(EnvironmentVariableNames.MarkitdownMcpUri, markitdown.GetEndpoint(ResourceNames.MarkitdownMcpEndpoint))
     .WaitForCompletion(databaseDeployment);
 
 var api = builder.AddProject<Projects.Api>(ResourceNames.Api)
