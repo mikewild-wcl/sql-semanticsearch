@@ -4,7 +4,7 @@ using Sql.SemanticSearch.Core.Chunking.Extensions;
 
 namespace Sql.SemanticSearch.Core.Chunking;
 
-internal sealed class MarkdownCleanupReader(Uri mcpServerUri, McpClientOptions? options = null)
+internal sealed class MarkItDownMcpMarkdownNormalizingReader(Uri mcpServerUri, McpClientOptions? options = null)
     : MarkItDownMcpReader(mcpServerUri, options)
 {
     public override async Task<IngestionDocument> ReadAsync(Stream source, string identifier, string mediaType,

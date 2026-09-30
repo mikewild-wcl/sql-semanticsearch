@@ -112,6 +112,18 @@ Thank you to arXiv for use of its open access interoperability.
 
 See https://aka.ms/sqltrigger for details on how to use the SQL trigger binding.
 
+Function `ChunkDocumentsFunction` is triggered when a row in the `Documents` table changes. It then downloads the PDF file from arXiv and ingests it using Microsoft Data Ingestion and the markitdown MCP.
+
+The first version of this code failed with errors in some documents, caused by a vertical arXiv header on the first page. The following is an example that can be used for testing:
+```
+curl -X POST http://localhost:7131/api/index-documents/ -H "Content-Type: application/json" -d '{"ids": ["2606.30317v1"]}'
+```
+
+This appears to be a bug or shortcoming in the markitdown MCP, which returns a reversed and partially line-seperated version of the header. PDF Pig returns the header correctly.
+There are two proposed workarounds:
+1. Fallback to using PDF Pig to read the the PDF file.
+2. Create a new reader that cleans the data returned from the markitdown MCP.
+
 ## Search API
 
 The API project is an ASP.NET Core minimal API for search queries. It uses `AI_GENERATE_EMBEDDINGS` to create an embedding for the search query, then compares it against stored embeddings using `VECTOR_DISTANCE` (cosine distance).

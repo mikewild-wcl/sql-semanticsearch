@@ -24,7 +24,6 @@ public class ChunkDocumentsFunction(
     public async Task Run(
         [SqlTrigger("[dbo].[Documents]", ResourceNames.SqlDatabase)]
         IReadOnlyList<SqlChange<DatabaseDocument>> changes,
-        //FunctionContext context,
         CancellationToken cancellationToken)
     {
         if (changes is null) return;

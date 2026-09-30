@@ -35,6 +35,7 @@ builder.Services.AddSingleton(_ =>
 {
     var uri = McpHelpers.GetMarkItDownMcpServerUrl();
     return new MarkItDownMcpReader(uri);
+    //return new MarkItDownMcpMarkdownNormalizingReader(uri);    
 });
 
 builder.Services.AddTransient<IDocumentReader, PdfDocumentReader>();
